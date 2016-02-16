@@ -112,8 +112,11 @@ object FallingBlockExtensions {
 
         def canSpreadInAvalanche = !EnviroMineLoaded && canSpread && avalanches && !block.isSoil
 
+        def hasValidSupport(xyz: XYZ)(implicit w: World) =
+            xyz.neighbors.count(neighbour => !canDisplace(blockAt(neighbour)) && !canDisplace(blockBelow(neighbour))) >= minSupportBlocks
+
         def canFallFrom(xyz: XYZ)(implicit w: World) =
-            canFall && !w.isRemote && canDisplace(blockBelow(xyz))
+            canFall && !w.isRemote && canDisplace(blockBelow(xyz)) && !hasValidSupport(xyz)
 
         def fallFrom(xyz: XYZ, xyzOrigin: XYZ)(implicit w: World) {
             if(!blocksFallInstantlyAt(xyz)) {
@@ -134,7 +137,7 @@ object FallingBlockExtensions {
         }
 
         def canSpreadFrom(xyz: XYZ)(implicit w: World) =
-            canSpread && !w.isRemote && !populating && !canDisplace(blockBelow(xyz))
+            canSpread && !w.isRemote && !populating && !canDisplace(blockBelow(xyz)) && !hasValidSupport(xyz)
 
         def spreadFrom(xyz: XYZ)(implicit w: World) {
             val freeNeighbors = xyz.neighbors.filter(canSpreadThrough)
