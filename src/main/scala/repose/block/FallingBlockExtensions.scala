@@ -89,6 +89,8 @@ object FallingBlockExtensions {
 
     def canDisplace(block: Block) = !block.isSolid
 
+    def isSticky(block: Block) = block.isDirt || block.isSoil || block.isClay
+
     def copyTileEntityTags(xyz: XYZ, tags: NBTTagCompound)(implicit w: World) {
         tileEntityOptionAt(xyz).foreach { tileEntity =>
             val newTags = new NBTTagCompound
@@ -112,11 +114,14 @@ object FallingBlockExtensions {
 
         def canSpreadInAvalanche = !EnviroMineLoaded && canSpread && avalanches && !block.isSoil
 
-        def hasValidSupport(xyz: XYZ)(implicit w: World) =
-            xyz.neighbors.count(neighbour => !canDisplace(blockAt(neighbour)) && !canDisplace(blockBelow(neighbour))) >= minSupportBlocks
+        def hasValidSupportAt(xyz: XYZ)(implicit w: World) =
+            isSticky(blockAt(xyz)) &&
+              xyz.neighbors.count(
+                  neighbour => !canDisplace(blockAt(neighbour)) && !canDisplace(blockBelow(neighbour))
+              ) >= minSupportBlocks
 
         def canFallFrom(xyz: XYZ)(implicit w: World) =
-            canFall && !w.isRemote && canDisplace(blockBelow(xyz)) && !hasValidSupport(xyz)
+            canFall && !w.isRemote && canDisplace(blockBelow(xyz)) && !hasValidSupportAt(xyz)
 
         def fallFrom(xyz: XYZ, xyzOrigin: XYZ)(implicit w: World) {
             if(!blocksFallInstantlyAt(xyz)) {
@@ -137,7 +142,7 @@ object FallingBlockExtensions {
         }
 
         def canSpreadFrom(xyz: XYZ)(implicit w: World) =
-            canSpread && !w.isRemote && !populating && !canDisplace(blockBelow(xyz)) && !hasValidSupport(xyz)
+            canSpread && !w.isRemote && !populating && !canDisplace(blockBelow(xyz)) && !hasValidSupportAt(xyz)
 
         def spreadFrom(xyz: XYZ)(implicit w: World) {
             val freeNeighbors = xyz.neighbors.filter(canSpreadThrough)

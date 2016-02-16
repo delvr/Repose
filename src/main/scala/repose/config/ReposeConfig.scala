@@ -28,9 +28,9 @@ object ReposeConfig extends ConfigCategory(None, ReposeMod.name) {
         s"Note: this option has no effect when using the EnviroMine mod.", true)
 
     val minSupportBlocks = new NumericSetting(this, "Minimum Support Blocks",
-        s"Need at least this many stable blocks beside a block to prevent cave-in. A neighbour block is considered " +
-        s"stable if it and the block below it cannot fall. Set to 4 to disable this (blocks with no support directly " +
-        s"beneath them will fall).", 4, 1, 4, 1)
+        s"Some blocks can avoid cave-ins by having this many stable blocks beside them. A block is considered stable" +
+        s"if it and the block below it cannot fall. Set to 5 to disable this and make all blocks fall regardless.",
+        5, 1, 4, 1)
 }
 
 /** Allowed values for [[ReposeConfig]] [[MultiChoiceSetting]]s.
