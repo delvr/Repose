@@ -1,4 +1,6 @@
-/*.iml
+*.iml
+*.ipr
+*.iws
 /.gradle/
 /build*/
 /doc*/

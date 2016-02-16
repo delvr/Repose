@@ -30,7 +30,7 @@ object ReposeConfig extends ConfigCategory(None, ReposeMod.name) {
     val minSupportBlocks = new NumericSetting(this, "Minimum Support Blocks",
         s"Some blocks can avoid cave-ins by having this many stable blocks beside them. A block is considered stable" +
         s"if it and the block below it cannot fall. Set to 5 to disable this and make all blocks fall regardless.",
-        5, 1, 4, 1)
+        5, 1, 5, 1)
 }
 
 /** Allowed values for [[ReposeConfig]] [[MultiChoiceSetting]]s.
