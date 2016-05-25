@@ -9,8 +9,8 @@ import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity._
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.util.MathHelper._
-import net.minecraft.util._
+import net.minecraft.util.math.MathHelper._
+import net.minecraft.util.math._
 import net.minecraft.world._
 import repose.config.ReposeConfig._
 import repose.config.SlopingBlocksValues._
@@ -19,22 +19,23 @@ import scala.math._
 /** @author delvr */
 object SlopingBlockExtensions {
 
-    def getCollisionBoundingBox(w: World, pos: BlockPos, state: IBlockState,
-                                super_getCollisionBoundingBox: ReplacedMethod[Block])
-                                       (implicit block: Block): AxisAlignedBB = {
-        val box: AxisAlignedBB = super_getCollisionBoundingBox(w, pos, state)
-        if(box == null || box.maxY == pos.getY) null // snow_layer with data 0 makes a 0-thickness box that still blocks side movement
+    def getCollisionBoundingBox(state: IBlockState, w: World, pos: BlockPos,
+                                super_getCollisionBoundingBox: ReplacedMethod[Block])(implicit block: Block): AxisAlignedBB = {
+        val box: AxisAlignedBB = super_getCollisionBoundingBox(state, w, pos)
+        if(box == null || box.maxY == 0) null // snow_layer with data 0 makes a 0-thickness box that still blocks side movement
         else box
     }
 
-    def addCollisionBoxesToList(w: World, pos: BlockPos, state: IBlockState, box: AxisAlignedBB,
-                                intersectingBoxes: java.util.List[_], collidingEntity: Entity,
-                                super_addCollisionBoxesToList: ReplacedMethod[Block])(implicit block: Block) {
-        implicit val world = w
-        if(collidingEntity.canUseSlope && block.canSlopeAt(pos))
-            intersectingBoxes ++= block.slopingCollisionBoxes(pos).filter(box.intersectsWith)
-        else
-            super_addCollisionBoxesToList(w, pos, state, box, intersectingBoxes, collidingEntity)
+    def addCollisionBoxToList(state: IBlockState, w: World, pos: BlockPos, box: AxisAlignedBB,
+                              intersectingBoxes: java.util.List[_], collidingEntity: Entity,
+                              super_addCollisionBoxToList: ReplacedMethod[Block])(implicit block: Block) {
+        if(block.getCollisionBoundingBox(state, w, pos) != null) { // optimization
+            implicit val world = w
+            if(collidingEntity.canUseSlope && block.canSlopeAt(pos))
+                intersectingBoxes ++= block.slopingCollisionBoxes(pos).filter(box.intersectsWith)
+            else
+                super_addCollisionBoxToList(state, w, pos, box, intersectingBoxes, collidingEntity)
+        }
     }
 
     def isEntityInsideOpaqueBlock(super_isEntityInsideOpaqueBlock: ReplacedMethod[Entity])
@@ -48,7 +49,7 @@ object SlopingBlockExtensions {
             val y = floor_double(entity.posY + entity.getEyeHeight.toDouble + dy.toDouble)
             val z = floor_double(entity.posZ + dz.toDouble)
             val block = world.getBlock(x, y, z)
-            if(block.isNormalCube && !(entity.canUseSlope && block.canSlopeAt(x, y, z)))
+            if(block.isNormalCube(block.getDefaultState) && !(entity.canUseSlope && block.canSlopeAt(x, y, z)))
               return true
         }
         false
@@ -60,25 +61,33 @@ object SlopingBlockExtensions {
                        (slopingBlocks.matches(NaturalStone) && block.isNaturalStone)
 
         def canSlopeAt(pos: BlockPos)(implicit w: World) =
-            canSlope && Option(block.getCollisionBoundingBox(w, pos, blockStateAt(pos))).forall(
-                _.maxY - pos.getY > 0.5 && blockAt(pos.up).getCollisionBoundingBox(w, pos.up, blockStateAt(pos.up)) == null)
+            canSlope && Option(block.getCollisionBoundingBox(blockStateAt(pos), w, pos)).forall(
+                _.maxY > 0.5 && blockAt(pos.up).getCollisionBoundingBox(blockStateAt(pos.up), w, pos.up) == null)
 
-        def slopingCollisionBoxes(pos: BlockPos)(implicit w: IBlockAccess): Seq[AxisAlignedBB] =
-            OrdinalDirections.map(cornerBox(pos, _, block.getBlockBoundsMaxY))
+        def slopingCollisionBoxes(pos: BlockPos)(implicit w: World): Seq[AxisAlignedBB] = {
+            val height = blockHeight(pos)
+            OrdinalDirections.map(cornerBox(pos, _, height))
+        }
 
-        private def cornerBox(pos: BlockPos, d: Direction, blockHeight: Double)(implicit w: IBlockAccess) = {
+        private def cornerBox(pos: BlockPos, d: Direction, blockHeight: Double)(implicit w: World) = {
             val stepHeight = blockHeight - 0.5
-            val (x, y, z) = blockPosXyz(pos)
-            val height = if(stepHigh(x + d.x, y, z      , stepHeight) &&
-                            stepHigh(x      , y, z + d.z, stepHeight) &&
-                            stepHigh(x + d.x, y, z + d.z, stepHeight)) blockHeight else stepHeight
-            new AxisAlignedBB(x + max(0.0, d.x/2.0), y, z + max(0.0, d.z/2.0), x + max(0.5, d.x), y + height, z + max(0.5, d.z))
+            val height = if(stepHigh(pos.add(d.x, 0,  0 ), stepHeight) &&
+                            stepHigh(pos.add( 0 , 0, d.z), stepHeight) &&
+                            stepHigh(pos.add(d.x, 0, d.z), stepHeight)) blockHeight else stepHeight
+            new AxisAlignedBB(pos.getX + max(0.0, d.x/2.0), pos.getY         , pos.getZ + max(0.0, d.z/2.0),
+                              pos.getX + max(0.5, d.x    ), pos.getY + height, pos.getZ + max(0.5, d.z    ))
         }
 
-        private def stepHigh(x: Int, y: Int, z: Int, stepHeight: Double)(implicit w: IBlockAccess) = {
-            val neighbor = blockAt(x, y, z)
-            neighbor.isSolid && neighbor.getBlockBoundsMaxY >= stepHeight
+        private def stepHigh(pos: BlockPos, stepHeight: Double)(implicit w: World) = {
+            val neighbor = blockAt(pos)
+            neighbor.isSolid && blockHeight(pos) >= stepHeight
         }
+    }
+
+    private def blockHeight(pos: BlockPos)(implicit w: World): Double = {
+        val state = blockStateAt(pos)
+        val box = state.getBlock.getCollisionBoundingBox(state, w, pos)
+        if(box == null) 0 else box.maxY
     }
 
     implicit class EntityValue(val entity: Entity) extends AnyVal {

@@ -7,18 +7,19 @@ import farseek.util._
 import farseek.world._
 import java.lang.Package._
 import java.util.Random
+import net.minecraft.block.Block._
 import net.minecraft.block._
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity._
 import net.minecraft.entity.item.EntityFallingBlock
-import net.minecraft.init.Blocks._
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.util.BlockPos
+import net.minecraft.util.math.MathHelper._
+import net.minecraft.util.math._
 import net.minecraft.world.World
 import repose.config.ReposeConfig._
 import repose.entity.item.EntityFallingBlockExtensions._
-import scala.collection.mutable
+import scala.collection.JavaConversions._
 
 /** @author delvr */
 object FallingBlockExtensions {
@@ -80,15 +81,22 @@ object FallingBlockExtensions {
         }
     }
 
-    def canFallInto(w: World, pos: BlockPos,
-                    super_canFallInto: ReplacedMethod[BlockFalling]): Boolean = canDisplace(blockAt(pos)(w))
+    def canFallThrough(state: IBlockState, super_canFallThrough: ReplacedMethod[BlockFalling]): Boolean =
+        canDisplace(state.getBlock)
 
     def canSpreadThrough(pos: BlockPos)(implicit w: World) =
         canDisplace(blockAt(pos)) && canDisplace(blockAt(pos.down)) && !occupiedByFallingBlock(pos)
 
-    def occupiedByFallingBlock(pos: BlockPos)(implicit w: World) =
-        !w.getEntitiesWithinAABB(classOf[EntityFallingBlock],
-            stone.getCollisionBoundingBox(w, pos, stone.getDefaultState)).isEmpty
+    def occupiedByFallingBlock(pos: BlockPos)(implicit w: World): Boolean = {
+        val chunk = w.getChunkFromBlockCoords(pos)
+        val entityLists = chunk.getEntityLists
+        val aabb = FULL_BLOCK_AABB.offset(pos)
+        for(t <- entityLists(floor_double((aabb.minY - 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
+            if(t.getEntityBoundingBox.intersectsWith(aabb)) return true
+        for(t <- entityLists(floor_double((aabb.minY + 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
+            if(t.getEntityBoundingBox.intersectsWith(aabb)) return true
+        false
+    }
 
     def canDisplace(block: Block) = !block.isSolid
 
@@ -96,7 +104,7 @@ object FallingBlockExtensions {
         tileEntityOptionAt(pos).foreach { tileEntity =>
             val newTags = new NBTTagCompound
             tileEntity.writeToNBT(newTags)
-            for(tag <- tags.getKeySet: mutable.Set[String]) {
+            for(tag: String <- tags.getKeySet) {
                 if(tag != "x" && tag != "y" && tag != "z")
                     newTags.setTag(tag, tags.getTag(tag))
             }
