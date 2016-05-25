@@ -5,6 +5,7 @@
       <value>
         <option name="AUTODETECT_INDENTS" value="false" />
         <ScalaCodeStyleSettings>
+          <option name="classCountToUseImportOnDemand" value="2" />
           <option name="importLayout">
             <array>
               <option value="all other imports" />

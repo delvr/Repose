@@ -1,7 +1,7 @@
 package repose
 
-import cpw.mods.fml.common.Mod
 import farseek.FarseekBaseMod
+import net.minecraftforge.fml.common.Mod
 import repose.config.ReposeConfig
 
 /** Non-core mod class for Repose. `@Mod` annotation parameters for mod and dependencies versions should be replaced by
@@ -9,8 +9,7 @@ import repose.config.ReposeConfig
   * @see [[repose.core.ReposeCoreMod]] for core mod class.
   * @author delvr
   */
-@Mod(modLanguage = "scala", modid = "repose", version = "SNAPSHOT",
-    dependencies = "required-after:farseek", guiFactory = "farseek.client.ConfigGui")
+@Mod(modid = "Repose", modLanguage = "scala", guiFactory = "farseek.client.ConfigGui")
 object ReposeMod extends FarseekBaseMod {
 
     val name = "Repose"
