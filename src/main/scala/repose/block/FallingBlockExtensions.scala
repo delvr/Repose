@@ -46,13 +46,13 @@ object FallingBlockExtensions {
             super_onBlockPlacedBy(w, pos, state, placer, item)
     }
 
-    def onNeighborBlockChange(w: World, pos: BlockPos, state: IBlockState, formerNeighbor: Block,
-                              super_onNeighborBlockChange: ReplacedMethod[Block])(implicit block: Block) {
+    def neighborChanged(state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block,
+                        super_neighborChanged: ReplacedMethod[Block])(implicit block: Block) {
         implicit val world = w
         if(!canDisplace(formerNeighbor) && block.canFallFrom(pos))
             w.scheduleUpdate(pos, block, block.fallDelay)
         else if(!block.isInstanceOf[BlockFalling])
-            super_onNeighborBlockChange(w, pos, state, formerNeighbor)
+            super_neighborChanged(state, w, pos, formerNeighbor)
     }
 
     def updateTick(w: World, pos: BlockPos, state: IBlockState, random: Random,

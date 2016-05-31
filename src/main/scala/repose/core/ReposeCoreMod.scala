@@ -41,9 +41,9 @@ class ReposeClassTransformer extends MethodReplacementTransformer {
             "(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/state/IBlockState;Lnet/minecraft/entity/EntityLivingBase;Lnet/minecraft/item/ItemStack;)V",
             "repose/block/FallingBlockExtensions/onBlockPlacedBy"),
 
-        MethodReplacement("net/minecraft/block/Block", "onNeighborBlockChange", "func_176204_a",
-            "(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/state/IBlockState;Lnet/minecraft/block/Block;)V",
-            "repose/block/FallingBlockExtensions/onNeighborBlockChange"),
+        MethodReplacement("net/minecraft/block/Block", "neighborChanged", "func_189540_a",
+            "(Lnet/minecraft/block/state/IBlockState;Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/Block;)V",
+            "repose/block/FallingBlockExtensions/neighborChanged"),
 
         MethodReplacement("net/minecraft/block/Block", "updateTick", "func_180650_b",
             "(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/state/IBlockState;Ljava/util/Random;)V",
