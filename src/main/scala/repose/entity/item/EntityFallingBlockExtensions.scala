@@ -76,7 +76,7 @@ object EntityFallingBlockExtensions {
                         if(block.canSpreadFrom(pos))
                             block.spreadFrom(pos)
                     }
-                    e.worldObj.playSound(null, e.posX, e.posY, e.posZ, sound.getBreakSound,
+                    e.worldObj.playSound(null, e.posX, e.posY, e.posZ, sound.breakSound,
                         SoundCategory.BLOCKS, sound.getVolume, sound.getPitch)
                 }
             }
