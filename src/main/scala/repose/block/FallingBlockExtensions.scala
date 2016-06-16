@@ -14,6 +14,7 @@ import net.minecraft.entity._
 import net.minecraft.entity.item.EntityFallingBlock
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.MathHelper._
 import net.minecraft.util.math._
 import net.minecraft.world.World
@@ -117,17 +118,17 @@ object FallingBlockExtensions {
 
         def fallDelay = FallDelay
 
-        def canFall = block.isInstanceOf[BlockFalling] || (granularFall && block.isGranular)
+        def canFall(implicit w: World) = !w.isRemote && (block.isInstanceOf[BlockFalling] || (granularFall && block.isGranular))
 
-        def canSpread = canFall && blockSpread
+        def canSpread(implicit w: World) = canFall && blockSpread
 
-        def canSpreadInAvalanche = !EnviroMineLoaded && canSpread && avalanches && !block.isSoil
+        def canSpreadInAvalanche(implicit w: World) = !EnviroMineLoaded && canSpread && avalanches && !block.isSoil
 
         def canFallFrom(pos: BlockPos)(implicit w: World) =
-            canFall && !w.isRemote && canDisplace(blockAt(pos.down))
+            canFall && canDisplace(blockAt(pos.down))
 
         def fallFrom(pos: BlockPos, posOrigin: BlockPos)(implicit w: World) {
-            if(!blocksFallInstantlyAt(pos)) {
+            if(!blocksFallInstantlyAt(pos) && MinecraftServer.getCurrentTimeMillis - w.getMinecraftServer.currentTime <= 2000L) {
                 spawnFallingBlock(pos, posOrigin)
             } else {
                 val data = dataAt(posOrigin)
@@ -145,7 +146,7 @@ object FallingBlockExtensions {
         }
 
         def canSpreadFrom(pos: BlockPos)(implicit w: World) =
-            canSpread && !w.isRemote && !populating && !canDisplace(blockAt(pos.down))
+            canSpread && !populating && !canDisplace(blockAt(pos.down))
 
         def spreadFrom(pos: BlockPos)(implicit w: World) {
             val freeNeighbors = pos.neighbors.filter(canSpreadThrough)

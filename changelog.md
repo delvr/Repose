@@ -1,1 +1,2 @@
-- Updated to Minecraft 1.9.
+- Added a "safety valve" to make blocks fall instantly without spreading when the server is overloaded.
+- Fixed a server-side crash upon block landing.
