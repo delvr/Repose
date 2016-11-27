@@ -1,7 +1,6 @@
 package repose.block
 
 import farseek.block._
-import farseek.core._
 import farseek.util.ImplicitConversions._
 import farseek.util._
 import farseek.world._
@@ -29,46 +28,41 @@ object FallingBlockExtensions {
 
     val FallDelay = 2
 
-    def onBlockAdded(w: World, pos: BlockPos, state: IBlockState,
-                     super_onBlockAdded: ReplacedMethod[Block])(implicit block: Block) {
+    def onBlockAdded(block: Block, w: World, pos: BlockPos, state: IBlockState) {
         implicit val world = w
         if(block.canFallFrom(pos))
             w.scheduleUpdate(pos, block, block.fallDelay)
         else if(!block.isInstanceOf[BlockFalling])
-            super_onBlockAdded(w, pos, state)
+            block.onBlockAdded(w, pos, state)
     }
 
-    def onBlockPlacedBy(w: World, pos: BlockPos, state: IBlockState, placer: EntityLivingBase, item: ItemStack,
-                        super_onBlockPlacedBy: ReplacedMethod[Block])(implicit block: Block) {
+    def onBlockPlacedBy(block: Block, w: World, pos: BlockPos, state: IBlockState, placer: EntityLivingBase, item: ItemStack) {
         implicit val world = w
         if(block.canSpreadFrom(pos))
             block.spreadFrom(pos)
         else
-            super_onBlockPlacedBy(w, pos, state, placer, item)
+            block.onBlockPlacedBy(w, pos, state, placer, item)
     }
 
-    def neighborChanged(state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block,
-                        super_neighborChanged: ReplacedMethod[Block])(implicit block: Block) {
+    def neighborChanged(block: Block, state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block) {
         implicit val world = w
         if(!canDisplace(formerNeighbor) && block.canFallFrom(pos))
             w.scheduleUpdate(pos, block, block.fallDelay)
         else if(!block.isInstanceOf[BlockFalling])
-            super_neighborChanged(state, w, pos, formerNeighbor)
+            block.neighborChanged(state, w, pos, formerNeighbor)
     }
 
-    def updateTick(w: World, pos: BlockPos, state: IBlockState, random: Random,
-                   super_updateTick: ReplacedMethod[Block])(implicit block: Block) {
+    def updateTick(block: Block, w: World, pos: BlockPos, state: IBlockState, random: Random) {
         implicit val world = w
         if(block.canFallFrom(pos))
             block.fallFrom(pos, pos)
         else if(!block.isInstanceOf[BlockFalling])
-            super_updateTick(w, pos, state, random)
+            block.updateTick(w, pos, state, random)
     }
 
-    def onBlockDestroyedByPlayer(w: World, pos: BlockPos, state: IBlockState,
-                                 super_onBlockDestroyedByPlayer: ReplacedMethod[Block])(implicit block: Block) {
+    def onBlockDestroyedByPlayer(block: Block, w: World, pos: BlockPos, state: IBlockState) {
         implicit val world = w
-        super_onBlockDestroyedByPlayer(w, pos, state)
+        block.onBlockDestroyedByPlayer(w, pos, state)
         triggerNeighborSpread(pos.up)
     }
 
@@ -82,8 +76,7 @@ object FallingBlockExtensions {
         }
     }
 
-    def canFallThrough(state: IBlockState, super_canFallThrough: ReplacedMethod[BlockFalling]): Boolean =
-        canDisplace(state.getBlock)
+    def canFallThrough(state: IBlockState): Boolean = canDisplace(state.getBlock)
 
     def canSpreadThrough(pos: BlockPos)(implicit w: World) =
         canDisplace(blockAt(pos)) && canDisplace(blockAt(pos.down)) && !occupiedByFallingBlock(pos)
@@ -118,7 +111,8 @@ object FallingBlockExtensions {
 
         def fallDelay = FallDelay
 
-        def canFall(implicit w: World) = !w.isRemote && (block.isInstanceOf[BlockFalling] || (granularFall && block.isGranular))
+        def canFall(implicit w: World) = !w.isRemote && (block.isInstanceOf[BlockFalling] ||
+                (granularFall && reposeGranularBlocks.value.contains(block)))
 
         def canSpread(implicit w: World) = canFall && blockSpread
 

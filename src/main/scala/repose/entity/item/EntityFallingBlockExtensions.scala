@@ -1,10 +1,10 @@
 package repose.entity.item
 
-import farseek.core._
 import farseek.entity._
 import farseek.util.ImplicitConversions._
 import farseek.world._
 import net.minecraft.block._
+import net.minecraft.entity.Entity
 import net.minecraft.entity.item.EntityFallingBlock
 import net.minecraft.init.Blocks._
 import net.minecraft.util.SoundCategory
@@ -34,55 +34,59 @@ object EntityFallingBlockExtensions {
         w.spawnEntityInWorld(e)
     }
 
-    def onUpdate(super_onUpdate: ReplacedMethod[EntityFallingBlock], e: EntityFallingBlock) {
-        implicit val w = e.worldObj
-        val blockState = e.getBlock
-        val block = blockState.getBlock
-        val sound = block.getSoundType
-        e.fallTime += 1
-        if(e.fallTime < 1000) {
-            val posOrigin = new BlockPos(e.prevPosX, e.prevPosY, e.prevPosZ)
-            e.prevPosX = e.posX
-            e.prevPosY = e.posY
-            e.prevPosZ = e.posZ
-            e.motionY -= 0.04D
-            e.moveEntity(0D, e.motionY, 0D)
-            if(!w.isRemote) {
-                if(e.fallTime == 1) {
-                    deleteBlockAt(posOrigin)
-                    if(block.canSpreadInAvalanche)
-                        triggerNeighborSpread(posOrigin.up)
-                }
-                if(block.canSpreadInAvalanche) {
-                    val box = e.getEntityBoundingBox
-                    val yTopCurrent  = floor_double(box.maxY)
-                    val yTopPrevious = floor_double(box.maxY - e.motionY)
-                    if(yTopCurrent < yTopPrevious)
-                        triggerNeighborSpread(e.x, yTopPrevious, e.z)
-                }
-                if(e.onGround) {
-                    e.setDead()
-                    val pos = new BlockPos(e)
-                    val blockHere = blockAt(pos)
-                    // blockHere: landing on a slab; pos.down: landing on a ladder
-                    if(!canDisplace(blockHere) || canDisplace(blockAt(pos.down)))
-                        block.dropBlockAsItem(w, pos, blockState, 0)
-                    else {
-                        if(!w.isAirBlock(pos))
-                            blockHere.dropBlockAsItem(w, pos, blockStateAt(pos), 0)
-                        setBlockAt(pos, block, blockState)
-                        if(e.getEntityData.getSize > 0) // not null!
-                            copyTileEntityTags(pos, e.getEntityData)
-                        if(block.canSpreadFrom(pos))
-                            block.spreadFrom(pos)
+    def onUpdate(entity: Entity) {
+        entity match {
+            case e: EntityFallingBlock =>
+                implicit val w = e.worldObj
+                val blockState = e.getBlock
+                val block = blockState.getBlock
+                val sound = block.getSoundType
+                e.fallTime += 1
+                if(e.fallTime < 1000) {
+                    val posOrigin = new BlockPos(e.prevPosX, e.prevPosY, e.prevPosZ)
+                    e.prevPosX = e.posX
+                    e.prevPosY = e.posY
+                    e.prevPosZ = e.posZ
+                    e.motionY -= 0.04D
+                    e.moveEntity(0D, e.motionY, 0D)
+                    if(!w.isRemote) {
+                        if(e.fallTime == 1) {
+                            deleteBlockAt(posOrigin)
+                            if(block.canSpreadInAvalanche)
+                                triggerNeighborSpread(posOrigin.up)
+                        }
+                        if(block.canSpreadInAvalanche) {
+                            val box = e.getEntityBoundingBox
+                            val yTopCurrent  = floor_double(box.maxY)
+                            val yTopPrevious = floor_double(box.maxY - e.motionY)
+                            if(yTopCurrent < yTopPrevious)
+                                triggerNeighborSpread(e.x, yTopPrevious, e.z)
+                        }
+                        if(e.onGround) {
+                            e.setDead()
+                            val pos = new BlockPos(e)
+                            val blockHere = blockAt(pos)
+                            // blockHere: landing on a slab; pos.down: landing on a ladder
+                            if(!canDisplace(blockHere) || canDisplace(blockAt(pos.down)))
+                                block.dropBlockAsItem(w, pos, blockState, 0)
+                            else {
+                                if(!w.isAirBlock(pos))
+                                    blockHere.dropBlockAsItem(w, pos, blockStateAt(pos), 0)
+                                setBlockAt(pos, block, blockState)
+                                if(e.getEntityData.getSize > 0) // not null!
+                                    copyTileEntityTags(pos, e.getEntityData)
+                                if(block.canSpreadFrom(pos))
+                                    block.spreadFrom(pos)
+                            }
+                            e.worldObj.playSound(null, e.posX, e.posY, e.posZ, sound.breakSound,
+                                SoundCategory.BLOCKS, sound.getVolume, sound.getPitch)
+                        }
                     }
-                    e.worldObj.playSound(null, e.posX, e.posY, e.posZ, sound.breakSound,
-                        SoundCategory.BLOCKS, sound.getVolume, sound.getPitch)
+                } else if(!w.isRemote) {
+                    e.setDead()
+                    block.dropBlockAsItem(w, (e.x, e.y, e.z), blockState, 0)
                 }
-            }
-        } else if(!w.isRemote) {
-            e.setDead()
-            block.dropBlockAsItem(w, (e.x, e.y, e.z), blockState, 0)
+            case e: Entity => e.onUpdate()
         }
     }
 }

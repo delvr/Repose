@@ -1,7 +1,7 @@
 # Repose
 This mod introduces walkable slopes and more to Minecraft.
 This means you can now walk up gentle slopes of grass, sand etc. without continually jumping.
-This works by making granular blocks* act as stairs, whose shape varies according to the elevation of neighboring blocks.
+This works by making granular blocks act as stairs, whose shape varies according to the elevation of neighboring blocks.
 Visually, these blocks are still the same cubes as before.
 A config option allows the same behavior for "natural" stone such as that found in caves.
 

@@ -1,2 +1,2 @@
-- Added a "safety valve" to make blocks fall instantly without spreading when the server is overloaded.
-- Fixed a server-side crash upon block landing.
+- Added config settings for custom lists of granular and natural stone blocks. Those are editable in `config/repose.properties` (but not on the mod config GUI).
+- Requires Farseek 2.0+.
