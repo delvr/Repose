@@ -1,2 +1,2 @@
-- Added config settings for custom lists of granular and natural stone blocks. Those are editable in `config/repose.properties` (but not on the mod config GUI).
-- Requires Farseek 2.0+.
+- Fixed IllegalAccessError crash on game start.
+- Fixed crash due to unreported Farseek dependency errors (requires Farseek 2.1 or later).
