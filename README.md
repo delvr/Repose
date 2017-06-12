@@ -6,37 +6,34 @@ This works by making granular blocks* act as stairs, whose shape varies accordin
 Visually, these blocks are still the same cubes as before.
 A config option allows the same behavior for "natural" stone such as that found in caves.
 
+This mod also implements gravity for most granular block so that they fall like sand or gravel, and then spread into piles
+or even trigger avalanches. This behavior is also configurable.
+
 Please note that the source code is in [Scala](http://scala-lang.org) (not Java).
-Keeping that in mind, if you have any questions about the code please send me (delvr) an email.
+Keeping that in mind, if you have any questions about the code please send me (delvr) a message here on GitHub.
 For help with the build process please read [Getting started with ForgeGradle](http://www.minecraftforge.net/forum/index.php/topic,14048.0.html) first.
 
-Questions about the mod itself are best posted to the [discussion thread](http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/2346379-streams-real-flowing-rivers).
+Questions about the mod itself are best posted to the [discussion thread](http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/2076319-repose-walkable-soil-slopes-give-your-spacebar-as).
 
 Note: IDE-specific instructions are for IntelliJ IDEA; see the ForgeGradle documentation for Eclipse equivalents.
 
 ## Dependencies Setup
-
-Repose requires [Farseek](https://github.com/delvr/Farseek) and [TerraFirmaCraft](https://github.com/Deadrik/TFCraft) (TFC) at compile time.
+Repose compilation requires [Farseek](https://github.com/delvr/Farseek) and [TerraFirmaCraft](https://github.com/Deadrik/TFCraft) (TFC).
 Compatible versions are specified using [Maven version range syntax](https://docs.oracle.com/middleware/1212/core/MAVEN/maven_version.htm#MAVEN402)
-in the `farseekDependency` and `tfcDependency` properties of `gradle.properties`.
-The build process of both Farseek and TFC will output `-deobf` and `-src` jars; for each dependency place both jars in Streams's `lib` subdirectory before running `setupDecompWorkspace`.
+in the `modDependencies` and `modOptionalDependencies` properties of `gradle.properties`.
+The build process of both Farseek and TFC will output `-deobf` and `-src` jars; for each dependency place both jars in Repose's `libs` subdirectory before running `setupDecompWorkspace`.
 
 ## IDE Setup
+The IDEA `Update Forge` run configuration will run `setupDecompWorkspace` and `genIntellijRuns`.
+After running `Update Forge`, synchronize Gradle in IntelliJ IDEA to set up module configs.
 
-The IDEA `Update` run configuration will run `setupDecompWorkspace`.
-After running `setupDecompWorkspace`, synchronize Gradle in IntelliJ IDEA to set up module configs.
-
-## Building
-
-Run the `build` configuration. Jars will be generated in `build/libs`.
+If using IntelliJ 2016 or later, make sure the Gradle plugin setting "Create separate module per source set" is NOT checked.
 
 ## Testing
-
-Run configs are not in source control but you can create your own using these properties for the client-side:
-
-* Main class: `net.minecraft.launchwrapper.Launch`
-* VM options: `-Djava.library.path=$USER_HOME$/.gradle/caches/minecraft/net/minecraft/minecraft_natives/1.7.10 -Dfml.coreMods.load=farseek.core.FarseekCoreMod,com.bioxx.tfc.TFCASMLoadingPlugin,repose.core.ReposeCoreMod`
-* Program arguments: `--tweakClass cpw.mods.fml.common.launcher.FMLTweaker --assetsDir $USER_HOME$/.gradle/caches/minecraft/assets --assetIndex 1.7.10 --accessToken=1234 --userProperties={}`
+Run the generated `Minecraft Client` or `Minecraft Server` configuration.
 
 Note: TFC is required at compile time but optional at runtime. To test without TFC in IDEA,
 switch the TFC dependencies from `Compile` to `Provided` in your module properties after synchronizing Gradle.
+
+## Building
+Run the `build` configuration. Jars will be generated in `build/libs`.

@@ -1,7 +1,6 @@
 package repose.block
 
 import farseek.block._
-import farseek.core.ReplacedMethod
 import farseek.util.ImplicitConversions._
 import farseek.world.Direction._
 import farseek.world._
@@ -13,32 +12,29 @@ import net.minecraft.util.AxisAlignedBB._
 import net.minecraft.util.MathHelper._
 import net.minecraft.world._
 import repose.config.ReposeConfig._
-import repose.config.SlopingBlocksValues._
 import scala.math._
 
 /** @author delvr */
 object SlopingBlockExtensions {
 
-    def getCollisionBoundingBoxFromPool(w: World, x: Int, y: Int, z: Int,
-                                        super_getCollisionBoundingBoxFromPool: ReplacedMethod[Block])
-                                       (implicit block: Block): AxisAlignedBB = {
-        val box: AxisAlignedBB = super_getCollisionBoundingBoxFromPool(w, x, y, z)
+    def getCollisionBoundingBoxFromPool(block: Block, w: World, x: Int, y: Int, z: Int): AxisAlignedBB = {
+        val box: AxisAlignedBB = block.getCollisionBoundingBoxFromPool(w, x, y, z)
         if(box == null || box.maxY == y) null // snow_layer with data 0 makes a 0-thickness box that still blocks side movement
         else box
     }
 
-    def addCollisionBoxesToList(w: World, x: Int, y: Int, z: Int, box: AxisAlignedBB,
-                                intersectingBoxes: java.util.List[_], collidingEntity: Entity,
-                                super_addCollisionBoxesToList: ReplacedMethod[Block])(implicit block: Block) {
-        implicit val world = w
-        if(collidingEntity.canUseSlope && block.canSlopeAt(x, y, z))
-            intersectingBoxes ++= block.slopingCollisionBoxes(x, y, z).filter(box.intersectsWith)
-        else
-            super_addCollisionBoxesToList(w, x, y, z, box, intersectingBoxes, collidingEntity)
+    def addCollisionBoxesToList(block: Block, w: World, x: Int, y: Int, z: Int, box: AxisAlignedBB,
+                                intersectingBoxes: java.util.List[_], collidingEntity: Entity) {
+        if(block.getCollisionBoundingBoxFromPool(w, x, y, z) != null) { // optimization
+            implicit val world = w
+            if(collidingEntity.canUseSlope && block.canSlopeAt(x, y, z))
+                intersectingBoxes ++= block.slopingCollisionBoxes(x, y, z).filter(box.intersectsWith)
+            else
+                block.addCollisionBoxesToList(w, x, y, z, box, intersectingBoxes, collidingEntity)
+        }
     }
 
-    def isEntityInsideOpaqueBlock(super_isEntityInsideOpaqueBlock: ReplacedMethod[Entity])
-                                 (implicit entity: Entity): Boolean = {
+    def isEntityInsideOpaqueBlock(entity: EntityLivingBase): Boolean = { // doesn't work with top-level Entity
         implicit val world = entity.worldObj
         for(i <- 0 until 8) {
             val dx = (((i >> 0) % 2).toFloat - 0.5F) * entity.width * 0.8F
@@ -56,8 +52,8 @@ object SlopingBlockExtensions {
 
     implicit class SlopingBlockValue(val block: Block) extends AnyVal {
 
-        def canSlope = (slopingBlocks.matches(GranularBlocks) && block.isGranular) ||
-                       (slopingBlocks.matches(NaturalStone) && block.isNaturalStone)
+        def canSlope = (slopingBlocks.matches(granularBlocksChoice) && reposeGranularBlocks.contains(block)) ||
+                       (slopingBlocks.matches(naturalStoneBlocksChoice) && reposeNaturalStoneBlocks.contains(block))
 
         def canSlopeAt(x: Int, y: Int, z: Int)(implicit w: World) =
             canSlope && Option(block.getCollisionBoundingBoxFromPool(w, x, y, z)).forall(
