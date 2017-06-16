@@ -1,4 +1,1 @@
-- Added config settings for custom lists of granular and natural stone blocks. Those are editable in config/repose.properties (but not on the mod config GUI). The config will pick up new blocks from new mods, but only if it is deleted before restarting the game.
-- Added a "safety valve" to make blocks fall instantly without spreading when the server is overloaded.
-- Harmonized TFC falling block behavior with Repose's.
-- Requires Farseek 2.0+.
+- Fixed missing configuration GUI.
