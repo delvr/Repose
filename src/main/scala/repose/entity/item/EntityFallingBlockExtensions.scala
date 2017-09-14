@@ -4,7 +4,8 @@ import farseek.entity._
 import farseek.util.ImplicitConversions._
 import farseek.world._
 import net.minecraft.block._
-import net.minecraft.entity.Entity
+import net.minecraft.entity.MoverType._
+import net.minecraft.entity._
 import net.minecraft.entity.item.EntityFallingBlock
 import net.minecraft.init.Blocks._
 import net.minecraft.util.SoundCategory
@@ -31,13 +32,13 @@ object EntityFallingBlockExtensions {
             entityData.getKeySet.foreach(entityData.removeTag)
             _.writeToNBT(entityData)
         }
-        w.spawnEntityInWorld(e)
+        w.spawnEntity(e)
     }
 
     def onUpdate(entity: Entity) {
         entity match {
             case e: EntityFallingBlock =>
-                implicit val w = e.worldObj
+                implicit val w = e.world
                 val blockState = e.getBlock
                 val block = blockState.getBlock
                 val sound = block.getSoundType
@@ -48,7 +49,7 @@ object EntityFallingBlockExtensions {
                     e.prevPosY = e.posY
                     e.prevPosZ = e.posZ
                     e.motionY -= 0.04D
-                    e.moveEntity(0D, e.motionY, 0D)
+                    e.move(SELF, 0D, e.motionY, 0D)
                     if(!w.isRemote) {
                         if(e.fallTime == 1) {
                             deleteBlockAt(posOrigin)
@@ -57,8 +58,8 @@ object EntityFallingBlockExtensions {
                         }
                         if(block.canSpreadInAvalanche) {
                             val box = e.getEntityBoundingBox
-                            val yTopCurrent  = floor_double(box.maxY)
-                            val yTopPrevious = floor_double(box.maxY - e.motionY)
+                            val yTopCurrent  = floor(box.maxY)
+                            val yTopPrevious = floor(box.maxY - e.motionY)
                             if(yTopCurrent < yTopPrevious)
                                 triggerNeighborSpread(e.x, yTopPrevious, e.z)
                         }
@@ -78,7 +79,7 @@ object EntityFallingBlockExtensions {
                                 if(block.canSpreadFrom(pos))
                                     block.spreadFrom(pos)
                             }
-                            e.worldObj.playSound(null, e.posX, e.posY, e.posZ, sound.breakSound,
+                            e.world.playSound(null, e.posX, e.posY, e.posZ, sound.breakSound,
                                 SoundCategory.BLOCKS, sound.getVolume, sound.getPitch)
                         }
                     }
