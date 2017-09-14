@@ -44,12 +44,12 @@ object FallingBlockExtensions {
             block.onBlockPlacedBy(w, pos, state, placer, item)
     }
 
-    def neighborChanged(block: Block, state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block) {
+    def neighborChanged(block: Block, state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block, neighborPos: BlockPos) {
         implicit val world = w
         if(!canDisplace(formerNeighbor) && block.canFallFrom(pos))
             w.scheduleUpdate(pos, block, block.fallDelay)
         else if(!block.isInstanceOf[BlockFalling])
-            block.neighborChanged(state, w, pos, formerNeighbor)
+            block.neighborChanged(state, w, pos, formerNeighbor, neighborPos)
     }
 
     def updateTick(block: Block, w: World, pos: BlockPos, state: IBlockState, random: Random) {
@@ -85,10 +85,10 @@ object FallingBlockExtensions {
         val chunk = w.getChunkFromBlockCoords(pos)
         val entityLists = chunk.getEntityLists
         val aabb = FULL_BLOCK_AABB.offset(pos)
-        for(t <- entityLists(floor_double((aabb.minY - 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
-            if(t.getEntityBoundingBox.intersectsWith(aabb)) return true
-        for(t <- entityLists(floor_double((aabb.minY + 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
-            if(t.getEntityBoundingBox.intersectsWith(aabb)) return true
+        for(t <- entityLists(floor((aabb.minY - 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
+            if(t.getEntityBoundingBox.intersects(aabb)) return true
+        for(t <- entityLists(floor((aabb.minY + 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
+            if(t.getEntityBoundingBox.intersects(aabb)) return true
         false
     }
 

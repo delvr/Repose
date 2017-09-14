@@ -8,7 +8,6 @@ import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity._
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.util.math.MathHelper._
 import net.minecraft.util.math._
 import net.minecraft.world._
 import repose.config.ReposeConfig._
@@ -17,32 +16,32 @@ import scala.math._
 /** @author delvr */
 object SlopingBlockExtensions {
 
-    def getCollisionBoundingBox(block: Block, state: IBlockState, w: World, pos: BlockPos): AxisAlignedBB = {
+    def getCollisionBoundingBox(block: Block, state: IBlockState, w: IBlockAccess, pos: BlockPos): AxisAlignedBB = {
         val box: AxisAlignedBB = block.getCollisionBoundingBox(state, w, pos)
         if(box == null || box.maxY == 0) null // snow_layer with data 0 makes a 0-thickness box that still blocks side movement
         else box
     }
 
     def addCollisionBoxToList(block: Block, state: IBlockState, w: World, pos: BlockPos, box: AxisAlignedBB,
-                              intersectingBoxes: java.util.List[AxisAlignedBB], collidingEntity: Entity) {
+                              intersectingBoxes: java.util.List[AxisAlignedBB], collidingEntity: Entity, flag: Boolean) {
         if(block.getCollisionBoundingBox(state, w, pos) != null) { // optimization
             implicit val world = w
             if(collidingEntity.canUseSlope && block.canSlopeAt(pos))
-                intersectingBoxes ++= block.slopingCollisionBoxes(pos).filter(box.intersectsWith)
+                intersectingBoxes ++= block.slopingCollisionBoxes(pos).filter(box.intersects)
             else
-                block.addCollisionBoxToList(state, w, pos, box, intersectingBoxes, collidingEntity)
+                block.addCollisionBoxToList(state, w, pos, box, intersectingBoxes, collidingEntity, flag)
         }
     }
 
     def isEntityInsideOpaqueBlock(entity: EntityLivingBase): Boolean = { // doesn't work with top-level Entity
-        implicit val world = entity.worldObj
+        implicit val world = entity.world
         for(i <- 0 until 8) {
             val dx = (((i >> 0) % 2).toFloat - 0.5F) * entity.width * 0.8F
             val dy = (((i >> 1) % 2).toFloat - 0.5F) * 0.1F
             val dz = (((i >> 2) % 2).toFloat - 0.5F) * entity.width * 0.8F
-            val x = floor_double(entity.posX + dx.toDouble)
-            val y = floor_double(entity.posY + entity.getEyeHeight.toDouble + dy.toDouble)
-            val z = floor_double(entity.posZ + dz.toDouble)
+            val x = floor(entity.posX + dx.toDouble).toInt
+            val y = floor(entity.posY + entity.getEyeHeight.toDouble + dy.toDouble).toInt
+            val z = floor(entity.posZ + dz.toDouble).toInt
             val block = world.getBlock(x, y, z)
             if(block.isNormalCube(block.getDefaultState) && !(entity.canUseSlope && block.canSlopeAt(x, y, z)))
               return true
