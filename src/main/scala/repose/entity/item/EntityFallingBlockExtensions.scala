@@ -21,7 +21,7 @@ object EntityFallingBlockExtensions {
         val block = blockAt(posOrigin)
         val data   = dataAt(posOrigin)
         val fallingBlock =
-            if(block.isInstanceOf[BlockGrass]) (DIRT, 0)
+            if(block.isInstanceOf[BlockGrass] || block.isInstanceOf[BlockGrassPath]) (DIRT, 0)
             else (block, data)
         val e = new EntityFallingBlock(w, pos.getX + 0.5D, pos.getY, pos.getZ + 0.5D, fallingBlock)
         e.prevPosX = posOrigin.getX + 0.5D
@@ -66,7 +66,7 @@ object EntityFallingBlockExtensions {
                         if(e.onGround) {
                             e.setDead()
                             val pos = new BlockPos(e)
-                            val blockHere = blockAt(pos)
+                            val blockHere = blockStateAt(pos)
                             // blockHere: landing on a slab; pos.down: landing on a ladder
                             if(!canDisplace(blockHere) || canDisplace(blockAt(pos.down)))
                                 block.dropBlockAsItem(w, pos, blockState, 0)
@@ -74,6 +74,10 @@ object EntityFallingBlockExtensions {
                                 if(!w.isAirBlock(pos))
                                     blockHere.dropBlockAsItem(w, pos, blockStateAt(pos), 0)
                                 setBlockAt(pos, block, blockState)
+                                block match {
+                                    case bf: BlockFalling => bf.onEndFalling(w, pos, blockState, blockHere)
+                                    case _ =>
+                                }
                                 if(e.getEntityData.getSize > 0) // not null!
                                     copyTileEntityTags(pos, e.getEntityData)
                                 if(block.canSpreadFrom(pos))

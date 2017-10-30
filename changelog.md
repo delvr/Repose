@@ -1,1 +1,2 @@
-- Updated to Minecraft 1.12.
+- Fixed [fallen concrete powder not turning into concrete](https://github.com/delvr/Repose/issues/12).
+- No longer [altering behavior of non-granular falling blocks](https://github.com/delvr/Repose/issues/13).

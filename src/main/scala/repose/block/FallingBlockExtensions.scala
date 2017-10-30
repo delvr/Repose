@@ -32,7 +32,7 @@ object FallingBlockExtensions {
         implicit val world = w
         if(block.canFallFrom(pos))
             w.scheduleUpdate(pos, block, block.fallDelay)
-        else if(!block.isInstanceOf[BlockFalling])
+        else
             block.onBlockAdded(w, pos, state)
     }
 
@@ -48,7 +48,7 @@ object FallingBlockExtensions {
         implicit val world = w
         if(!canDisplace(formerNeighbor) && block.canFallFrom(pos))
             w.scheduleUpdate(pos, block, block.fallDelay)
-        else if(!block.isInstanceOf[BlockFalling])
+        else
             block.neighborChanged(state, w, pos, formerNeighbor, neighborPos)
     }
 
@@ -56,7 +56,7 @@ object FallingBlockExtensions {
         implicit val world = w
         if(block.canFallFrom(pos))
             block.fallFrom(pos, pos)
-        else if(!block.isInstanceOf[BlockFalling])
+        else
             block.updateTick(w, pos, state, random)
     }
 
@@ -111,15 +111,13 @@ object FallingBlockExtensions {
 
         def fallDelay = FallDelay
 
-        def canFall(implicit w: World) = !w.isRemote && (block.isInstanceOf[BlockFalling] ||
-                (granularFall && reposeGranularBlocks.value.contains(block)))
+        def canFall(implicit w: World) = !w.isRemote && granularFall && reposeGranularBlocks.value.contains(block)
 
         def canSpread(implicit w: World) = canFall && blockSpread
 
         def canSpreadInAvalanche(implicit w: World) = !EnviroMineLoaded && canSpread && avalanches && !block.isSoil
 
-        def canFallFrom(pos: BlockPos)(implicit w: World) =
-            canFall && canDisplace(blockAt(pos.down))
+        def canFallFrom(pos: BlockPos)(implicit w: World) = canFall && canDisplace(blockAt(pos.down))
 
         def fallFrom(pos: BlockPos, posOrigin: BlockPos)(implicit w: World) {
             if(!blocksFallInstantlyAt(pos) && MinecraftServer.getCurrentTimeMillis - w.getMinecraftServer.currentTime <= 2000L) {
