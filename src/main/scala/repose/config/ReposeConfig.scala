@@ -5,6 +5,7 @@ import farseek.config._
 import farseek.util._
 import net.minecraft.block.Block
 import net.minecraft.block.Block._
+import net.minecraft.init.Blocks._
 import repose.ReposeMod
 
 /** Configuration settings for Repose.
@@ -13,7 +14,7 @@ import repose.ReposeMod
 object ReposeConfig extends ConfigCategory(None, ReposeMod.name) {
 
     val reposeGranularBlocks = new BlockSetSetting(this, "Granular Blocks",
-        "The blocks considered to be granular.", () => granularBlocks)
+        "The blocks considered to be granular.", () => granularBlocks - SNOW)
 
     val reposeNaturalStoneBlocks = new BlockSetSetting(this, "Natural Stone Blocks",
         "The blocks considered to be natural stone.", () => naturalStoneBlocks)
