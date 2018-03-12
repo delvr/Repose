@@ -1,1 +1,1 @@
-- Excluding full-blocks of snow from default granular blocks, so that igloos and modded mountaintops can stay intact.
+- Fixed [modded grass blocks turning into vanilla dirt when falling](https://github.com/delvr/Repose/issues/15).

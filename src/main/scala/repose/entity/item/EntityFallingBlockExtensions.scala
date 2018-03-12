@@ -20,9 +20,7 @@ object EntityFallingBlockExtensions {
     def spawnFallingBlock(pos: BlockPos, posOrigin: BlockPos)(implicit w: World) {
         val block = blockAt(posOrigin)
         val data   = dataAt(posOrigin)
-        val fallingBlock =
-            if(block.isInstanceOf[BlockGrass] || block.isInstanceOf[BlockGrassPath]) (DIRT, 0)
-            else (block, data)
+        val fallingBlock = if(block == GRASS || block == GRASS_PATH || block == FARMLAND) (DIRT, 0) else (block, data)
         val e = new EntityFallingBlock(w, pos.getX + 0.5D, pos.getY, pos.getZ + 0.5D, fallingBlock)
         e.prevPosX = posOrigin.getX + 0.5D
         e.prevPosY = posOrigin.getY
