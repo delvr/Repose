@@ -7,7 +7,7 @@ A config option allows the same behavior for "natural" stone such as that found 
 
 Please note that the source code is in [Scala](http://scala-lang.org) (not Java).
 Keeping that in mind, if you have any questions about the code please send me (delvr) an email.
-For help with the build process please read [Getting started with ForgeGradle](http://www.minecraftforge.net/forum/index.php/topic,14048.0.html) first.
+For help with the build process please read [Getting started with ForgeGradle](http://www.minecraftforge.net/forum/topic/13860-tutorial-getting-started-with-forgegradle/) first.
 
 Questions about the mod itself are best posted to the [discussion thread](http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/2076319-repose-walkable-soil-slopes-give-your-spacebar-a).
 
