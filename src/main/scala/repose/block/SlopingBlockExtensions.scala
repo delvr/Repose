@@ -24,10 +24,10 @@ object SlopingBlockExtensions {
 
     def addCollisionBoxToList(block: Block, state: IBlockState, w: World, pos: BlockPos, box: AxisAlignedBB,
                               intersectingBoxes: java.util.List[AxisAlignedBB], collidingEntity: Entity, flag: Boolean) {
-        if(block.getCollisionBoundingBox(state, w, pos) != null) { // optimization
+        if(state.getCollisionBoundingBox(w, pos) != null) { // optimization
             implicit val world = w
-            if(collidingEntity.canUseSlope && block.canSlopeAt(pos))
-                intersectingBoxes ++= block.slopingCollisionBoxes(pos).filter(box.intersects)
+            if(collidingEntity.canUseSlope && state.canSlopeAt(pos))
+                intersectingBoxes ++= state.slopingCollisionBoxes(pos).filter(box.intersects)
             else
                 block.addCollisionBoxToList(state, w, pos, box, intersectingBoxes, collidingEntity, flag)
         }
@@ -42,21 +42,22 @@ object SlopingBlockExtensions {
             val x = floor(entity.posX + dx.toDouble).toInt
             val y = floor(entity.posY + entity.getEyeHeight.toDouble + dy.toDouble).toInt
             val z = floor(entity.posZ + dz.toDouble).toInt
-            val block = world.getBlock(x, y, z)
-            if(block.isNormalCube(block.getDefaultState) && !(entity.canUseSlope && block.canSlopeAt(x, y, z)))
+            val pos = new BlockPos(x, y, z)
+            val state = world.getBlockState(pos)
+            if(state.isNormalCube && !(entity.canUseSlope && state.canSlopeAt(pos)))
               return true
         }
         false
     }
 
-    implicit class SlopingBlockValue(val block: Block) extends AnyVal {
+    implicit class SlopingBlockValue(val state: IBlockState) extends AnyVal {
 
-        def canSlope = (slopingBlocks.matches(granularBlocksChoice)     &&     reposeGranularBlocks.contains(block)) ||
-                       (slopingBlocks.matches(naturalStoneBlocksChoice) && reposeNaturalStoneBlocks.contains(block))
+        def canSlope: Boolean = (slopingBlocks.matches(granularBlocksChoice)     &&     reposeGranularBlocks.contains(state)) ||
+                                (slopingBlocks.matches(naturalStoneBlocksChoice) && reposeNaturalStoneBlocks.contains(state))
 
-        def canSlopeAt(pos: BlockPos)(implicit w: World) =
-            canSlope && Option(block.getCollisionBoundingBox(blockStateAt(pos), w, pos)).forall(
-                _.maxY > 0.5 && blockAt(pos.up).getCollisionBoundingBox(blockStateAt(pos.up), w, pos.up) == null)
+        def canSlopeAt(pos: BlockPos)(implicit w: World): Boolean =
+            canSlope && Option(state.getCollisionBoundingBox(w, pos)).forall(
+                _.maxY > 0.5 && w.getBlockState(pos.up).getCollisionBoundingBox(w, pos.up) == null)
 
         def slopingCollisionBoxes(pos: BlockPos)(implicit w: World): Seq[AxisAlignedBB] = {
             val height = blockHeight(pos)
@@ -73,18 +74,17 @@ object SlopingBlockExtensions {
         }
 
         private def stepHigh(pos: BlockPos, stepHeight: Double)(implicit w: World) = {
-            val neighbor = blockAt(pos)
-            neighbor.isSolid && blockHeight(pos) >= stepHeight
+            val neighbor = w.getBlockState(pos)
+            neighbor.getBlock.isSolid && blockHeight(pos) >= stepHeight
         }
     }
 
     private def blockHeight(pos: BlockPos)(implicit w: World): Double = {
-        val state = blockStateAt(pos)
-        val box = state.getBlock.getCollisionBoundingBox(state, w, pos)
+        val box = w.getBlockState(pos).getCollisionBoundingBox(w, pos)
         if(box == null) 0 else box.maxY
     }
 
     implicit class EntityValue(val entity: Entity) extends AnyVal {
-        def canUseSlope = entity.isInstanceOf[EntityPlayer] || entity.isInstanceOf[EntityCreature]
+        def canUseSlope: Boolean = entity.isInstanceOf[EntityPlayer] || entity.isInstanceOf[EntityCreature]
     }
 }

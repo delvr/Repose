@@ -8,12 +8,14 @@ import java.lang.Package._
 import java.util.Random
 import net.minecraft.block.Block._
 import net.minecraft.block._
-import net.minecraft.block.state.IBlockState
+import net.minecraft.block.state._
 import net.minecraft.entity._
 import net.minecraft.entity.item.EntityFallingBlock
+import net.minecraft.init.Blocks._
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.server.MinecraftServer
+import net.minecraft.util.SoundCategory
 import net.minecraft.util.math.MathHelper._
 import net.minecraft.util.math._
 import net.minecraft.world.World
@@ -24,38 +26,38 @@ import scala.collection.JavaConversions._
 /** @author delvr */
 object FallingBlockExtensions {
 
-    val EnviroMineLoaded = getPackage("enviromine") != null
+    val EnviroMineLoaded: Boolean = getPackage("enviromine") != null
 
     val FallDelay = 2
 
     def onBlockAdded(block: Block, w: World, pos: BlockPos, state: IBlockState) {
         implicit val world = w
-        if(block.canFallFrom(pos))
-            w.scheduleUpdate(pos, block, block.fallDelay)
+        if(state.canFallFrom(pos))
+            w.scheduleUpdate(pos, block, state.fallDelay)
         else
             block.onBlockAdded(w, pos, state)
     }
 
     def onBlockPlacedBy(block: Block, w: World, pos: BlockPos, state: IBlockState, placer: EntityLivingBase, item: ItemStack) {
         implicit val world = w
-        if(block.canSpreadFrom(pos))
-            block.spreadFrom(pos)
+        if(state.canSpreadFrom(pos))
+            state.spreadFrom(pos)
         else
             block.onBlockPlacedBy(w, pos, state, placer, item)
     }
 
-    def neighborChanged(block: Block, state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block, neighborPos: BlockPos) {
+    def neighborChanged(state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block, neighborPos: BlockPos) {  // doesn't work with top-level IBlockBehaviors
         implicit val world = w
-        if(!canDisplace(formerNeighbor) && block.canFallFrom(pos))
-            w.scheduleUpdate(pos, block, block.fallDelay)
+        if(state.canFallFrom(pos)) // optimizing with !canDisplace(formerNeighbor) fails with SpongeForge
+            w.scheduleUpdate(pos, state.getBlock, state.fallDelay)
         else
-            block.neighborChanged(state, w, pos, formerNeighbor, neighborPos)
+            state.neighborChanged(w, pos, formerNeighbor, neighborPos)
     }
 
     def updateTick(block: Block, w: World, pos: BlockPos, state: IBlockState, random: Random) {
         implicit val world = w
-        if(block.canFallFrom(pos))
-            block.fallFrom(pos, pos)
+        if(state.canFallFrom(pos))
+            state.fallFrom(pos, pos)
         else
             block.updateTick(w, pos, state, random)
     }
@@ -67,35 +69,57 @@ object FallingBlockExtensions {
     }
 
     def triggerNeighborSpread(pos: BlockPos)(implicit w: World) {
-        if(!populating && !w.isRemote && !blockAt(pos).isLiquid) { // Prevent beach destruction
+        if(!populating && !w.isRemote && !w.getBlockState(pos).getBlock.isLiquid) { // Prevent beach destruction
             for(nPos <- pos.neighbors) {
-                val neighbor = blockAt(nPos)
+                val neighbor = w.getBlockState(nPos)
                 if(neighbor.canSpreadInAvalanche && !occupiedByFallingBlock(nPos) && neighbor.canSpreadFrom(nPos))
                     neighbor.spreadFrom(nPos)
             }
         }
     }
 
-    def canFallThrough(state: IBlockState): Boolean = canDisplace(state.getBlock)
+    def canFallThrough(state: IBlockState): Boolean = canDisplace(state) || !state.isTopSolid
 
-    def canSpreadThrough(pos: BlockPos)(implicit w: World) =
-        canDisplace(blockAt(pos)) && canDisplace(blockAt(pos.down)) && !occupiedByFallingBlock(pos)
+    def canSpreadThrough(pos: BlockPos)(implicit w: World): Boolean =
+        canDisplace(w.getBlockState(pos)) && canFallThrough(w.getBlockState(pos.down)) && !occupiedByFallingBlock(pos)
 
     def occupiedByFallingBlock(pos: BlockPos)(implicit w: World): Boolean = {
         val chunk = w.getChunkFromBlockCoords(pos)
         val entityLists = chunk.getEntityLists
         val aabb = FULL_BLOCK_AABB.offset(pos)
-        for(t <- entityLists(floor((aabb.minY - 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
+        for(t <- entityLists(clamped(0, floor((aabb.minY - 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
             if(t.getEntityBoundingBox.intersects(aabb)) return true
-        for(t <- entityLists(floor((aabb.minY + 1) / 16D)).getByClass(classOf[EntityFallingBlock]))
+        for(t <- entityLists(clamped(0, floor((aabb.minY + 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
             if(t.getEntityBoundingBox.intersects(aabb)) return true
         false
     }
 
-    def canDisplace(block: Block) = !block.isSolid
+    def canDisplace(state: IBlockState): Boolean = !state.getBlock.isSolid
+
+    def onLanding(pos: BlockPos, state: IBlockState, entityTags: Option[NBTTagCompound])(implicit w: World): Unit = {
+        val block = state.getBlock
+        val stateHere = w.getBlockState(pos)
+        // blockHere: landing on a slab; pos.down: landing on a ladder
+        if(!canDisplace(stateHere) || canDisplace(w.getBlockState(pos.down)))
+            block.dropBlockAsItem(w, pos, state, 0)
+        else {
+            if(!w.isAirBlock(pos))
+                stateHere.getBlock.dropBlockAsItem(w, pos, w.getBlockState(pos), 0)
+            w.setBlockState(pos, state)
+            block match {
+                case bf: BlockFalling => bf.onEndFalling(w, pos, state, stateHere)
+                case _ =>
+            }
+            entityTags.foreach(copyTileEntityTags(pos, _))
+            if(!serverDelayed && state.canSpreadFrom(pos))
+                state.spreadFrom(pos)
+        }
+        val sound = block.getSoundType(state, w, pos, null)
+        w.playSound(null, pos, sound.breakSound, SoundCategory.BLOCKS, sound.getVolume, sound.getPitch)
+    }
 
     def copyTileEntityTags(pos: BlockPos, tags: NBTTagCompound)(implicit w: World) {
-        tileEntityOptionAt(pos).foreach { tileEntity =>
+        Option(w.getTileEntity(pos)).foreach { tileEntity =>
             val newTags = new NBTTagCompound
             tileEntity.writeToNBT(newTags)
             for(tag: String <- tags.getKeySet) {
@@ -107,38 +131,42 @@ object FallingBlockExtensions {
         }
     }
 
-    implicit class FallingBlockValue(val block: Block) extends AnyVal {
+    def serverDelayed(implicit w: World): Boolean = MinecraftServer.getCurrentTimeMillis - w.getMinecraftServer.currentTime > 2000L
 
-        def fallDelay = FallDelay
+    implicit class FallingBlockValue(val state: IBlockState) extends AnyVal {
 
-        def canFall(implicit w: World) = !w.isRemote && granularFall && reposeGranularBlocks.value.contains(block)
+        def fallDelay: Int = FallDelay
 
-        def canSpread(implicit w: World) = canFall && blockSpread
+        def canFall(implicit w: World): Boolean = !w.isRemote && granularFall.value && reposeGranularBlocks.value.contains(state)
 
-        def canSpreadInAvalanche(implicit w: World) = !EnviroMineLoaded && canSpread && avalanches && !block.isSoil
+        def canSpread(implicit w: World): Boolean = canFall && blockSpread.value
 
-        def canFallFrom(pos: BlockPos)(implicit w: World) = canFall && canDisplace(blockAt(pos.down))
+        def canSpreadInAvalanche(implicit w: World): Boolean = !EnviroMineLoaded && canSpread && avalanches.value && !state.getBlock.isSoil
+
+        def canFallFrom(pos: BlockPos)(implicit w: World): Boolean = canFall && w.isBlockLoaded(pos.down) && canFallThrough(w.getBlockState(pos.down))
 
         def fallFrom(pos: BlockPos, posOrigin: BlockPos)(implicit w: World) {
-            if(!blocksFallInstantlyAt(pos) && MinecraftServer.getCurrentTimeMillis - w.getMinecraftServer.currentTime <= 2000L) {
-                spawnFallingBlock(pos, posOrigin)
+            val origState = w.getBlockState(posOrigin)
+            val origBlock = origState.getBlock
+            val state = if(origBlock == GRASS || origBlock == GRASS_PATH || origBlock == FARMLAND) DIRT.getDefaultState else origState
+            val tileEntity = Option(w.getTileEntity(posOrigin))
+            if(!blocksFallInstantlyAt(pos) && !serverDelayed) {
+                spawnFallingBlock(state, pos, posOrigin, tileEntity)
             } else {
-                val data = dataAt(posOrigin)
-                val tileEntity = tileEntityOptionAt(posOrigin)
-                deleteBlockAt(posOrigin)
-                downFrom(pos.down).find(!block.canFallFrom(_)).foreach { posLanded =>
-                    setBlockAt(posLanded, block, data)
-                    tileEntity.foreach{entity =>
+                w.setBlockToAir(posOrigin)
+                downFrom(pos.down).find(!state.canFallFrom(_)).foreach { posLanded =>
+                    val entityTags = tileEntity.map { entity =>
                         val tags = new NBTTagCompound
                         entity.writeToNBT(tags)
-                        copyTileEntityTags(posLanded, tags)
+                        tags
                     }
+                    onLanding(posLanded, state, entityTags)
                 }
             }
         }
 
-        def canSpreadFrom(pos: BlockPos)(implicit w: World) =
-            canSpread && !populating && !canDisplace(blockAt(pos.down))
+        def canSpreadFrom(pos: BlockPos)(implicit w: World): Boolean =
+            canSpread && !populating && w.isBlockLoaded(pos) && !canFallThrough(w.getBlockState(pos.down))
 
         def spreadFrom(pos: BlockPos)(implicit w: World) {
             val freeNeighbors = pos.neighbors.filter(canSpreadThrough)

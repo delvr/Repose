@@ -7,7 +7,7 @@ A config option allows the same behavior for "natural" stone such as that found 
 
 Please note that the source code is in [Scala](http://scala-lang.org) (not Java).
 Keeping that in mind, if you have any questions about the code please send me (delvr) an email.
-For help with the build process please read [Getting started with ForgeGradle](http://www.minecraftforge.net/forum/index.php/topic,14048.0.html) first.
+For help with the build process please read [Getting started with ForgeGradle](http://www.minecraftforge.net/forum/topic/13860-tutorial-getting-started-with-forgegradle/) first.
 
 Questions about the mod itself are best posted to the [discussion thread](http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/2076319-repose-walkable-soil-slopes-give-your-spacebar-a).
 
@@ -17,7 +17,7 @@ Note: IDE-specific instructions are for IntelliJ IDEA; see the ForgeGradle docum
 Repose requires [Farseek](https://github.com/delvr/Farseek).
 Compatible versions are specified using [Maven version range syntax](https://docs.oracle.com/middleware/1212/core/MAVEN/maven_version.htm#MAVEN402)
 in the `modDependencies` properties of `gradle.properties`.
-The build process of Farseek will output `-deobf` and `-sources` jars; place both jars in Streams's `libs` subdirectory before running `setupDecompWorkspace`.
+The build process of Farseek will output `-deobf` and `-sources` jars; place both jars in Repose's `libs` subdirectory before running `setupDecompWorkspace`.
 
 ## IDE Setup
 The IDEA `Update` run configuration will run `setupDecompWorkspace` and `genIntellijRuns`.
