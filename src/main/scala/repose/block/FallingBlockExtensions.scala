@@ -15,7 +15,7 @@ import net.minecraft.init.Blocks._
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.server.MinecraftServer
-import net.minecraft.util.SoundCategory
+import net.minecraft.util._
 import net.minecraft.util.math.MathHelper._
 import net.minecraft.util.math._
 import net.minecraft.world.World
@@ -78,19 +78,29 @@ object FallingBlockExtensions {
         }
     }
 
-    def canFallThrough(state: IBlockState): Boolean = canDisplace(state) || !state.isTopSolid
+    def canFallThrough(pos: BlockPos)(implicit w: World): Boolean = {
+        val state = w.getBlockState(pos)
+        canDisplace(state) || !hasSolidTop(pos, state)
+    }
+
+    def hasSolidTop(pos: BlockPos, state: IBlockState)(implicit w: World): Boolean = {
+        val topBox = new AxisAlignedBB(0, 0.99, 0, 1, 1, 1).offset(pos)
+        val intersectingBoxes = new java.util.ArrayList[AxisAlignedBB]
+        state.addCollisionBoxToList(w, pos, topBox, intersectingBoxes, null, false)
+        !intersectingBoxes.isEmpty
+    }
 
     def canSpreadThrough(pos: BlockPos)(implicit w: World): Boolean =
-        canDisplace(w.getBlockState(pos)) && canFallThrough(w.getBlockState(pos.down)) && !occupiedByFallingBlock(pos)
+        canDisplace(w.getBlockState(pos)) && canFallThrough(pos.down) && !occupiedByFallingBlock(pos)
 
     def occupiedByFallingBlock(pos: BlockPos)(implicit w: World): Boolean = {
         val chunk = w.getChunkFromBlockCoords(pos)
         val entityLists = chunk.getEntityLists
-        val aabb = FULL_BLOCK_AABB.offset(pos)
-        for(t <- entityLists(clamped(0, floor((aabb.minY - 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
-            if(t.getEntityBoundingBox.intersects(aabb)) return true
-        for(t <- entityLists(clamped(0, floor((aabb.minY + 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
-            if(t.getEntityBoundingBox.intersects(aabb)) return true
+        val fullBlockBox = FULL_BLOCK_AABB.offset(pos)
+        for(t <- entityLists(clamped(0, floor((fullBlockBox.minY - 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
+            if(t.getEntityBoundingBox.intersects(fullBlockBox)) return true
+        for(t <- entityLists(clamped(0, floor((fullBlockBox.minY + 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
+            if(t.getEntityBoundingBox.intersects(fullBlockBox)) return true
         false
     }
 
@@ -137,13 +147,13 @@ object FallingBlockExtensions {
 
         def fallDelay: Int = FallDelay
 
-        def canFall(implicit w: World): Boolean = !w.isRemote && granularFall.value && reposeGranularBlocks.value.contains(state)
+        def canFall(implicit w: World): Boolean = !populating && !w.isRemote && granularFall.value && reposeGranularBlocks.value.contains(state)
 
         def canSpread(implicit w: World): Boolean = canFall && blockSpread.value
 
         def canSpreadInAvalanche(implicit w: World): Boolean = !EnviroMineLoaded && canSpread && avalanches.value && !state.getBlock.isSoil
 
-        def canFallFrom(pos: BlockPos)(implicit w: World): Boolean = canFall && w.isBlockLoaded(pos.down) && canFallThrough(w.getBlockState(pos.down))
+        def canFallFrom(pos: BlockPos)(implicit w: World): Boolean = canFall && w.isBlockLoaded(pos.down) && canFallThrough(pos.down)
 
         def fallFrom(pos: BlockPos, posOrigin: BlockPos)(implicit w: World) {
             val origState = w.getBlockState(posOrigin)
@@ -166,7 +176,7 @@ object FallingBlockExtensions {
         }
 
         def canSpreadFrom(pos: BlockPos)(implicit w: World): Boolean =
-            canSpread && !populating && w.isBlockLoaded(pos) && !canFallThrough(w.getBlockState(pos.down))
+            canSpread && w.isBlockLoaded(pos) && !canFallThrough(pos.down)
 
         def spreadFrom(pos: BlockPos)(implicit w: World) {
             val freeNeighbors = pos.neighbors.filter(canSpreadThrough)

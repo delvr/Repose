@@ -7,7 +7,7 @@ A config option allows the same behavior for "natural" stone such as that found 
 
 Please note that the source code is in [Scala](http://scala-lang.org) (not Java).
 Keeping that in mind, if you have any questions about the code please send me (delvr) an email.
-For help with the build process please read [Getting started with ForgeGradle](http://www.minecraftforge.net/forum/topic/13860-tutorial-getting-started-with-forgegradle/) first.
+For help with the build process please read [Getting started with ForgeGradle](https://mcforge.readthedocs.io/en/latest/gettingstarted/) first.
 
 Questions about the mod itself are best posted to the [discussion thread](http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/2076319-repose-walkable-soil-slopes-give-your-spacebar-a).
 
@@ -22,7 +22,8 @@ The build process of Farseek will output `-deobf` and `-sources` jars; place bot
 ## IDE Setup
 The IDEA `Update` run configuration will run `setupDecompWorkspace` and `genIntellijRuns`.
 After running `Update`, synchronize Gradle in IntelliJ IDEA to set up module configs.
-If using IntelliJ 2016, make sure the Gradle plugin setting "Create separate module per source set" is NOT checked.
+If you get the error `scalac: 'jvm-1.8' is not a valid choice for '-target'` when running in IDEA, 
+go in your Gradle Runner settings and check the option "Delegate IDE build/run actions to Gradle".
 
 ## Testing
 Run the generated `Minecraft Client` or `Minecraft Server` configuration.

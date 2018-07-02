@@ -4,7 +4,6 @@ import farseek.block._
 import farseek.util.ImplicitConversions._
 import farseek.world.Direction._
 import farseek.world._
-import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity._
 import net.minecraft.entity.player.EntityPlayer
@@ -16,20 +15,20 @@ import scala.math._
 /** @author delvr */
 object SlopingBlockExtensions {
 
-    def getCollisionBoundingBox(block: Block, state: IBlockState, w: IBlockAccess, pos: BlockPos): AxisAlignedBB = {
-        val box: AxisAlignedBB = block.getCollisionBoundingBox(state, w, pos)
+    def getCollisionBoundingBox(state: IBlockState, w: IBlockAccess, pos: BlockPos): AxisAlignedBB = {
+        val box: AxisAlignedBB = state.getCollisionBoundingBox(w, pos)
         if(box == null || box.maxY == 0) null // snow_layer with data 0 makes a 0-thickness box that still blocks side movement
         else box
     }
 
-    def addCollisionBoxToList(block: Block, state: IBlockState, w: World, pos: BlockPos, box: AxisAlignedBB,
+    def addCollisionBoxToList(state: IBlockState, w: World, pos: BlockPos, box: AxisAlignedBB,
                               intersectingBoxes: java.util.List[AxisAlignedBB], collidingEntity: Entity, flag: Boolean) {
         if(state.getCollisionBoundingBox(w, pos) != null) { // optimization
             implicit val world = w
             if(collidingEntity.canUseSlope && state.canSlopeAt(pos))
                 intersectingBoxes ++= state.slopingCollisionBoxes(pos).filter(box.intersects)
             else
-                block.addCollisionBoxToList(state, w, pos, box, intersectingBoxes, collidingEntity, flag)
+                state.addCollisionBoxToList(w, pos, box, intersectingBoxes, collidingEntity, flag)
         }
     }
 

@@ -1,4 +1,2 @@
-- Now compatible with SpongeForge (requires Farseek 2.3.0 or newer).
-- Fixed a [crash with Cubic Chunks](https://github.com/delvr/Repose/issues/20) (requires Farseek 2.3.0 or newer).
-- Blocks falling instantly (due to server lag or unloaded chunks) now behave in a manner more consistent with blocks falling as normally as entities; for example they will now [break upon landing on half-slabs](https://github.com/delvr/Repose/issues/19).
-- Internally, started migrating away from deprecated Farseek 2.x world-access wrappers.
+- Fixed [a crash upon world load when cobble is marked as granular](https://github.com/delvr/Repose/issues/25).
+- Fixed [falling blocks getting stuck on top of transparent blocks](https://github.com/delvr/Repose/issues/24).
