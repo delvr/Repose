@@ -1,6 +1,5 @@
 package repose.block
 
-import farseek.block._
 import farseek.util.ImplicitConversions._
 import farseek.world.Direction._
 import farseek.world._
@@ -22,31 +21,14 @@ object SlopingBlockExtensions {
     }
 
     def addCollisionBoxToList(state: IBlockState, w: World, pos: BlockPos, box: AxisAlignedBB,
-                              intersectingBoxes: java.util.List[AxisAlignedBB], collidingEntity: Entity, flag: Boolean) {
+                              intersectingBoxes: java.util.List[AxisAlignedBB], collidingEntity: Entity, flag: Boolean): Unit = {
         if(state.getCollisionBoundingBox(w, pos) != null) { // optimization
-            implicit val world = w
+            implicit val world: World = w
             if(collidingEntity.canUseSlope && state.canSlopeAt(pos))
                 intersectingBoxes ++= state.slopingCollisionBoxes(pos).filter(box.intersects)
             else
                 state.addCollisionBoxToList(w, pos, box, intersectingBoxes, collidingEntity, flag)
         }
-    }
-
-    def isEntityInsideOpaqueBlock(entity: EntityLivingBase): Boolean = { // doesn't work with top-level Entity
-        implicit val world = entity.world
-        for(i <- 0 until 8) {
-            val dx = (((i >> 0) % 2).toFloat - 0.5F) * entity.width * 0.8F
-            val dy = (((i >> 1) % 2).toFloat - 0.5F) * 0.1F
-            val dz = (((i >> 2) % 2).toFloat - 0.5F) * entity.width * 0.8F
-            val x = floor(entity.posX + dx.toDouble).toInt
-            val y = floor(entity.posY + entity.getEyeHeight.toDouble + dy.toDouble).toInt
-            val z = floor(entity.posZ + dz.toDouble).toInt
-            val pos = new BlockPos(x, y, z)
-            val state = world.getBlockState(pos)
-            if(state.isNormalCube && !(entity.canUseSlope && state.canSlopeAt(pos)))
-              return true
-        }
-        false
     }
 
     implicit class SlopingBlockValue(val state: IBlockState) extends AnyVal {
@@ -60,30 +42,35 @@ object SlopingBlockExtensions {
 
         def slopingCollisionBoxes(pos: BlockPos)(implicit w: World): Seq[AxisAlignedBB] = {
             val height = blockHeight(pos)
-            OrdinalDirections.map(cornerBox(pos, _, height))
+            val stepHeight = height - 0.5
+            val slopingShore = slopingShores.value
+            val submerged = w.getBlockState(pos.up).getMaterial.isLiquid
+            OrdinalDirections.map(cornerBox(pos, _, height, stepHeight, slopingShore, submerged))
         }
 
-        private def cornerBox(pos: BlockPos, d: Direction, blockHeight: Double)(implicit w: World) = {
-            val stepHeight = blockHeight - 0.5
-            val height = if(stepHigh(pos.add(d.x, 0,  0 ), stepHeight) &&
-                            stepHigh(pos.add( 0 , 0, d.z), stepHeight) &&
-                            stepHigh(pos.add(d.x, 0, d.z), stepHeight)) blockHeight else stepHeight
+        private def cornerBox(pos: BlockPos, d: Direction, blockHeight: Double, stepHeight: Double, slopingShore: Boolean, submerged: Boolean)(implicit w: World) = {
+            val height = if(stepHigh(pos.add(d.x, 0,  0 ), stepHeight, slopingShore, submerged) &&
+                            stepHigh(pos.add( 0 , 0, d.z), stepHeight, slopingShore, submerged) &&
+                            stepHigh(pos.add(d.x, 0, d.z), stepHeight, slopingShore, submerged)) blockHeight else stepHeight
             new AxisAlignedBB(pos.getX + max(0.0, d.x/2.0), pos.getY         , pos.getZ + max(0.0, d.z/2.0),
                               pos.getX + max(0.5, d.x    ), pos.getY + height, pos.getZ + max(0.5, d.z    ))
         }
 
-        private def stepHigh(pos: BlockPos, stepHeight: Double)(implicit w: World) = {
-            val neighbor = w.getBlockState(pos)
-            neighbor.getBlock.isSolid && blockHeight(pos) >= stepHeight
+        private def stepHigh(nPos: BlockPos, stepHeight: Double, slopingShore: Boolean, submerged: Boolean)(implicit w: World): Boolean = {
+            val neighbor = w.getBlockState(nPos)
+            (!slopingShore && !submerged && neighbor.getMaterial.isLiquid) ||
+              (neighbor.getMaterial.blocksMovement && neighbor.blockHeight(nPos) >= stepHeight)
         }
-    }
 
-    private def blockHeight(pos: BlockPos)(implicit w: World): Double = {
-        val box = w.getBlockState(pos).getCollisionBoundingBox(w, pos)
-        if(box == null) 0 else box.maxY
+        def blockHeight(pos: BlockPos)(implicit w: World): Double =
+            Option(state.getCollisionBoundingBox(w, pos)).fold(0d)(_.maxY)
     }
 
     implicit class EntityValue(val entity: Entity) extends AnyVal {
-        def canUseSlope: Boolean = entity.isInstanceOf[EntityPlayer] || entity.isInstanceOf[EntityCreature]
+        def canUseSlope: Boolean = entity match {
+            case player: EntityPlayer => sneakingInSlopes.value || !player.isSneaking
+            case creature: EntityCreature => true // excludes water mobs
+            case _ => false // excludes falling block entities etc.
+        }
     }
 }

@@ -1,2 +1,3 @@
-- Fixed [a crash upon world load when cobble is marked as granular](https://github.com/delvr/Repose/issues/25).
-- Fixed [falling blocks getting stuck on top of transparent blocks](https://github.com/delvr/Repose/issues/24).
+- Added a config option to disable sloping behavior for sneaking players.
+- Added a config option to [disable sloping behavior from blocks on shores](https://github.com/delvr/Repose/issues/40).
+- Restored falling block behavior with SpongeForge v7.1.6 (with v7.1.6-RC3657 and newer, this also requires Farseek v2.3.2).

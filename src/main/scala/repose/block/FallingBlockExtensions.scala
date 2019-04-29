@@ -2,6 +2,7 @@ package repose.block
 
 import farseek.block._
 import farseek.util.ImplicitConversions._
+import farseek.util.Reflection._
 import farseek.util._
 import farseek.world._
 import java.lang.Package._
@@ -26,6 +27,11 @@ import scala.collection.JavaConversions._
 /** @author delvr */
 object FallingBlockExtensions {
 
+    private lazy val spongeMixinBlockNeighborOverrideField = classOf[Block].field("hasNeighborOverride")
+
+    def setSpongeNeighborOverrides(): Unit = spongeMixinBlockNeighborOverrideField.foreach(field =>
+        Block.REGISTRY.iterator.foreach(field.setValue(true, _))) // Enable everything because config could change mid-game (todo: implement observer)
+
     val EnviroMineLoaded: Boolean = getPackage("enviromine") != null
 
     val FallDelay = 2
@@ -46,12 +52,21 @@ object FallingBlockExtensions {
             block.onBlockPlacedBy(w, pos, state, placer, item)
     }
 
-    def neighborChanged(state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block, neighborPos: BlockPos) {  // doesn't work with top-level IBlockBehaviors
+    def neighborChanged(state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block, neighborPos: BlockPos) { // doesn't work with top-level IBlockBehaviors
         implicit val world = w
-        if(state.canFallFrom(pos)) // optimizing with !canDisplace(formerNeighbor) fails with SpongeForge
+        if(state.canFallFrom(pos))
             w.scheduleUpdate(pos, state.getBlock, state.fallDelay)
         else
             state.neighborChanged(w, pos, formerNeighbor, neighborPos)
+    }
+
+    // Legacy Block override compatible with certain versions of SpongeForge
+    def neighborChanged(block: Block, state: IBlockState, w: World, pos: BlockPos, formerNeighbor: Block, neighborPos: BlockPos) {
+        implicit val world = w
+        if(state.canFallFrom(pos))
+            w.scheduleUpdate(pos, state.getBlock, state.fallDelay)
+        else
+            block.neighborChanged(state, w, pos, formerNeighbor, neighborPos)
     }
 
     def updateTick(block: Block, w: World, pos: BlockPos, state: IBlockState, random: Random) {
@@ -62,14 +77,14 @@ object FallingBlockExtensions {
             block.updateTick(w, pos, state, random)
     }
 
-    def onBlockDestroyedByPlayer(block: Block, w: World, pos: BlockPos, state: IBlockState) {
+    def onPlayerDestroy(block: Block, w: World, pos: BlockPos, state: IBlockState) {
         implicit val world = w
-        block.onBlockDestroyedByPlayer(w, pos, state)
+        block.onPlayerDestroy(w, pos, state)
         triggerNeighborSpread(pos.up)
     }
 
     def triggerNeighborSpread(pos: BlockPos)(implicit w: World) {
-        if(!populating && !w.isRemote && !w.getBlockState(pos).getBlock.isLiquid) { // Prevent beach destruction
+        if(!populating && !w.isRemote && !w.getBlockState(pos).getMaterial.isLiquid) { // Prevent beach destruction
             for(nPos <- pos.neighbors) {
                 val neighbor = w.getBlockState(nPos)
                 if(neighbor.canSpreadInAvalanche && !occupiedByFallingBlock(nPos) && neighbor.canSpreadFrom(nPos))
@@ -94,7 +109,7 @@ object FallingBlockExtensions {
         canDisplace(w.getBlockState(pos)) && canFallThrough(pos.down) && !occupiedByFallingBlock(pos)
 
     def occupiedByFallingBlock(pos: BlockPos)(implicit w: World): Boolean = {
-        val chunk = w.getChunkFromBlockCoords(pos)
+        val chunk = w.getChunk(pos)
         val entityLists = chunk.getEntityLists
         val fullBlockBox = FULL_BLOCK_AABB.offset(pos)
         for(t <- entityLists(clamped(0, floor((fullBlockBox.minY - 1) / 16D), entityLists.length - 1)).getByClass(classOf[EntityFallingBlock]))
@@ -104,7 +119,7 @@ object FallingBlockExtensions {
         false
     }
 
-    def canDisplace(state: IBlockState): Boolean = !state.getBlock.isSolid
+    def canDisplace(state: IBlockState): Boolean = !state.getMaterial.blocksMovement
 
     def onLanding(pos: BlockPos, state: IBlockState, entityTags: Option[NBTTagCompound])(implicit w: World): Unit = {
         val block = state.getBlock

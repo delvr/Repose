@@ -37,6 +37,12 @@ object ReposeConfig extends ConfigCategory(None, ReposeMod.name) {
         s"If true, non-soil blocks that can spread will also trigger avalanches when disturbed. " +
         s"Note: this option has no effect when using the EnviroMine mod.", () => true)
 
+    val sneakingInSlopes = new BooleanSetting(this, "Sneaking in Slopes",
+        s"If false, sneaking players don't go up and down slopes.", () => true)
+
+    val slopingShores = new BooleanSetting(this, "Sloping Shores",
+        s"If false, blocks don't slope at the edge of liquids.", () => true)
+
     private def displayNames(blocks: Set[Block]) = sortedCSV(blocks.map(displayName).toSeq)
 }
 
