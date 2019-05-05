@@ -69,7 +69,7 @@ object SlopingBlockExtensions {
     implicit class EntityValue(val entity: Entity) extends AnyVal {
         def canUseSlope: Boolean = entity match {
             case player: EntityPlayer => sneakingInSlopes.value || !player.isSneaking
-            case creature: EntityCreature => true // excludes water mobs
+            case creature: EntityCreature => creature.getEyeHeight > 0.5F // excludes air/water mobs, small mobs like rabbits, and low-eyed mobs like BetterAnimals+ goats.
             case _ => false // excludes falling block entities etc.
         }
     }
