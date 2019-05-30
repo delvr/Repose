@@ -1,0 +1,18 @@
+modLoader="scorge"
+loaderVersion="[1,)"
+issueTrackerURL="https://github.com/delvr/Repose/issues"
+logoFile="repose_logo.png"
+[[mods]]
+    modId="repose"
+    version="${file.jarVersion}"
+    displayName="Repose"
+    displayURL="https://minecraft.curseforge.com/projects/repose"
+    authors="delvr"
+    description="This mod allows you to walk up and down hills without jumping. Give your spacebar a break!"
+    entryObject="repose.ReposeMod" # for Scorge
+[[dependencies.repose]]
+    modId="forge"
+    mandatory=true
+    versionRange="[25,)"
+    ordering="NONE"
+    side="BOTH"

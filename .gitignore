@@ -3,21 +3,21 @@
 
 !/.idea/
 /.idea/*
-!/.idea/codeStyles/
-!/.idea/dictionaries/
-!/.idea/inspectionProfiles/
-!/.idea/runConfigurations/
-!/.idea/scopes/
 !/.idea/gradle.xml
 !/.idea/vcs.xml
+!/.idea/codeStyles/*
+!/.idea/inspectionProfiles/*
+!/.idea/runConfigurations/*
+/.idea/runConfigurations/run*.xml
 
-!/gradle/
-
-!/src/
-/src/main/resources/mcmod.info
+!/gradle/**
+!/src/**
+/src/main/resources/transformers/
+/src/main/resources/META-INF/coremods.json
 
 !/.gitignore
-!/*.gradle
-/.gradle/
-!/*.md
-!/gradle*
+!/build.gradle
+!/gradle.properties
+!/gradlew*
+!/README.md
+!/transformerTemplate.js

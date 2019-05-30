@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaProjectSettings">
-    <option name="dontShowConversionDialog" value="true" />
-    <option name="includeBlockExpressions" value="true" />
-    <option name="includeLiterals" value="true" />
-    <option name="showArgumentsToByNameParams" value="true" />
+    <option name="addOverrideToImplementInConverter" value="false" />
+    <option name="showImplisitConversions" value="true" />
   </component>
 </project>
-

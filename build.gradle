@@ -1,14 +1,189 @@
 buildscript {
     repositories {
         jcenter()
-        maven { url "http://files.minecraftforge.net/maven" }
-        maven { url "https://plugins.gradle.org/m2/" }
+        mavenCentral()
+        maven { url = "https://files.minecraftforge.net/maven" }
     }
     dependencies {
-        classpath "net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT"
-        classpath "co.riiid:gradle-github-plugin:0.4.2"
-        classpath "gradle.plugin.com.matthewprenger:CurseGradle:1.1.2"
+        classpath group: "net.minecraftforge.gradle", name: "ForgeGradle", version: "3.+", changing: true
+    }
+}
+plugins {
+    id "scala"
+    id "maven-publish"
+    id "com.matthewprenger.cursegradle" version "1.2.0"
+}
+
+wrapper.gradleVersion = gradleWrapperVersion
+
+apply plugin: "net.minecraftforge.gradle"
+
+version = modVersion
+group = modGroup
+archivesBaseName = modId
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = "1.8"
+
+String runClientDir = "runClient"
+String runServerDir = "runServer"
+String forgeLogLevelProperty = "forge.logging.console.level"
+String moduleName = project.name // replace with "${project.name}_main" if creating separate module per source set
+minecraft {
+    mappings channel: mappingsChannel, version: mappingsVersion
+    runs {
+        client {
+            workingDirectory project.file(runClientDir)
+            property forgeLogLevelProperty, forgeDevLogLevel
+            ideaModule moduleName
+            afterEvaluate { singleInstance true }
+        }
+        server {
+            workingDirectory project.file(runServerDir)
+            property forgeLogLevelProperty, forgeDevLogLevel
+            ideaModule moduleName
+            afterEvaluate { singleInstance true }
+        }
     }
 }
 
-apply from: zipTree(fileTree("libs"){include "Farseek-*-deobf.jar"}.singleFile).matching{include "common.gradle"}.singleFile
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+configurations { scorge }
+
+dependencies {
+    minecraft "net.minecraftforge:forge:$forgeVersion"
+    scorge "net.minecraftforge:Scorge:$scorgeVersion" // for copying into mods folder
+    implementation "net.minecraftforge:Scorge:$scorgeVersion" // for ScorgeModLoadingContext
+    implementation "org.scala-lang:scala-library:$scalaVersion"
+}
+
+def reobfFile = file("$buildDir/reobfJar/output.jar")
+def reobfArtifact = artifacts.add("default", reobfFile) {
+    type "jar"
+    builtBy "reobfJar"
+}
+
+task devJar(type: Jar) {
+    classifier = "dev"
+    from sourceSets.main.output
+}
+
+task srcJar(type: Jar) {
+    classifier = "src"
+    from sourceSets.main.allSource
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifacts = [reobfArtifact, devJar, srcJar]
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
+
+Task installTask(String side, String baseDir, File reobfuscatedJar) {
+    tasks.create("install$side", Sync) {
+        from reobfuscatedJar
+        into "$baseDir/mods"
+        rename { jar.archiveName }
+        preserve { exclude "${jar.baseName}*.jar" }
+    }
+}
+if(project.hasProperty("minecraftClientDir"))
+    tasks.jar.finalizedBy(installTask("Client", minecraftClientDir, reobfArtifact.file))
+if(project.hasProperty("minecraftServerDir"))
+    tasks.jar.finalizedBy(installTask("Server", minecraftServerDir, reobfArtifact.file))
+
+File mainResourcesDir = sourceSets.main.resources.srcDirs[0]
+File manifestDir = new File(mainResourcesDir, "META-INF")
+ext.transformersDir = new File(mainResourcesDir, "transformers")
+String quote(String s) { '"' + s + '"' }
+
+String createTransformer(String replacedMethodOwner, String replacedMethodDevName, String replacedMethodSrgName,
+                         String replacedMethodDescriptor, String replacementClass, String... transformedClasses) {
+    String transformerName = "${replacedMethodOwner}_${replacedMethodDevName}_${replacedMethodSrgName}"
+    copy {
+        from "transformerTemplate.js"
+        into transformersDir
+        rename { "${transformerName}.js" }
+        expand([transformerName: transformerName,
+                transformedClasses: transformedClasses.collect{quote(it)}.join(", "),
+                replacementClass: replacementClass,
+                replacedMethodOwner: replacedMethodOwner,
+                replacedMethodDevName: replacedMethodDevName,
+                replacedMethodSrgName: replacedMethodSrgName,
+                replacedMethodDescriptor: replacedMethodDescriptor
+        ])
+    }
+    transformerName
+}
+
+import groovy.json.*
+task createTransformers { doFirst {
+    delete { delete transformersDir }
+    List<String> transformerNames = [
+            createTransformer("IBlockState", "getCollisionShape", "func_196952_d", "",
+                    "repose.block.SlopingBlockExtensions", "net.minecraft.world.IWorldReaderBase"),
+            createTransformer("Entity", "isEntityInsideOpaqueBlock", "func_70094_T", "",
+                    "repose.block.SlopingBlockExtensions", "net.minecraft.entity.EntityLivingBase"),
+            createTransformer("IBlockState", "onBlockAdded", "func_196945_a", "", 
+                    "repose.block.FallingBlockExtensions", "net.minecraft.world.chunk.Chunk", "net.minecraftforge.common.ForgeHooks"),
+            createTransformer("Block", "onBlockPlacedBy", "func_180633_a", "", 
+                    "repose.block.FallingBlockExtensions", "net.minecraft.item.ItemBlock"),
+            createTransformer("Block", "onPlayerDestroy", "func_176206_d", "", 
+                    "repose.block.FallingBlockExtensions", "net.minecraft.server.management.PlayerInteractionManager", "net.minecraft.client.multiplayer.PlayerControllerMP"),
+            createTransformer("IBlockState", "neighborChanged", "func_189546_a", "", 
+                    "repose.block.FallingBlockExtensions", "net.minecraft.world.World"),
+            createTransformer("IBlockState", "tick", "func_196940_a", "",
+                    "repose.block.FallingBlockExtensions", "net.minecraft.world.WorldServer"),
+            createTransformer("Entity", "tick", "func_70071_h_", "", 
+                    "repose.block.FallingBlockExtensions", "net.minecraft.world.World"),
+    ] 
+    new File(manifestDir, "coremods.json").text = new JsonBuilder(transformerNames.collectEntries{name ->
+        [name, "transformers/${name}.js"]}).toPrettyString()
+}}
+
+project.tasks.withType(Jar) { task ->
+    task.manifest.attributes([
+            "Implementation-Title": project.name,
+            "Implementation-Version": version // used by mods.toml
+    ])
+    task.dependsOn(createTransformers)
+}
+
+Task copyScorgeTask(String baseDir) {
+    tasks.create("copyScorge_$baseDir", Sync) {
+        from configurations.scorge
+        into new File(baseDir, "mods")
+        preserve { exclude "Scorge*.jar" }
+    }
+}
+Task copyScorgeToClient = copyScorgeTask(runClientDir)
+Task copyScorgeToServer = copyScorgeTask(runServerDir)
+
+tasks.whenTaskAdded { task -> // handle ForgeGradle dynamic tasks
+    if(task.name.startsWith("gen") && task.name.endsWith("Runs"))
+        task.dependsOn(copyScorgeToClient, copyScorgeToServer)
+    else if(task.name.startsWith("prepareRun"))
+        task.dependsOn(createTransformers)
+}
+
+if(project.hasProperty("curseForgeApiKey")) {
+    curseforge { afterEvaluate {
+        apiKey = curseForgeApiKey
+        curseGradleOptions.debug = true
+        project {
+            id = curseForgeId
+            releaseType = properties["curseForgeReleaseType"] ?: "release"
+            changelogType = "markdown"
+            addArtifact devJar
+            addArtifact srcJar
+        }
+    } }
+    tasks.curseforge.dependsOn(build)
+}

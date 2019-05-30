@@ -1,0 +1,12 @@
+{
+  "repose.configgui.granularBlocksWhitelist": "Granular blocks whitelist",
+  "repose.configgui.granularBlocksBlacklist": "Granular blocks blacklist",
+  "repose.configgui.naturalStoneBlocksWhitelist": "Natural stone blocks whitelist",
+  "repose.configgui.naturalStoneBlocksBlacklist": "Natural stone blocks blacklist",
+  "repose.configgui.granularFall": "Granular fall",
+  "repose.configgui.blockSpread": "Block spread",
+  "repose.configgui.avalanches": "Avalanches",
+  "repose.configgui.sneakingDownSlopes": "Sneaking down slopes",
+  "repose.configgui.slopingShores": "Sloping shores",
+  "repose.configgui.maxServerLag": "Max server lag"
+}
