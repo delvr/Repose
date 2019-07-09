@@ -6,6 +6,7 @@ import farseek.world._
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity._
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.util.math.BlockPos.PooledMutableBlockPos
 import net.minecraft.util.math._
 import net.minecraft.world._
 import repose.config.ReposeConfig._
@@ -71,6 +72,29 @@ object SlopingBlockExtensions {
             case player: EntityPlayer => sneakingInSlopes.value || !player.isSneaking
             case creature: EntityCreature => creature.getEyeHeight > 0.5F // excludes air/water mobs, small mobs like rabbits, and low-eyed mobs like BetterAnimals+ goats.
             case _ => false // excludes falling block entities etc.
+        }
+    }
+
+    def isEntityInsideOpaqueBlock(entity: EntityLivingBase): Boolean = {
+        import entity._
+        !noClip && (entity match {
+          case player: EntityPlayer => !player.isPlayerSleeping
+          case _ => true
+        }) && {
+            val pos = PooledMutableBlockPos.retain
+            try {
+                for(i <- 0 until 8) {
+                    val y = MathHelper.floor(posY + ((((i >> 0) % 2) - 0.5) * 0.1) + getEyeHeight)
+                    val x = MathHelper.floor(posX + ((((i >> 1) % 2) - 0.5) * width * 0.8))
+                    val z = MathHelper.floor(posZ + ((((i >> 2) % 2) - 0.5) * width * 0.8))
+                    if(pos.getX != x || pos.getY != y || pos.getZ != z) {
+                        pos.setPos(x, y, z): PooledMutableBlockPos
+                        val state = world(pos)
+                        if(state.causesSuffocation && !state.canSlopeAt(pos)(world)) return true
+                  }
+              }
+              false
+          } finally pos.release()
         }
     }
 }

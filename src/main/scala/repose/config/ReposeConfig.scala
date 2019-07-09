@@ -43,6 +43,9 @@ object ReposeConfig extends ConfigCategory(None, ReposeMod.name) {
     val slopingShores = new BooleanSetting(this, "Sloping Shores",
         s"If false, blocks don't slope at the edge of liquids.", () => true)
 
+    val breakOnPartialBlocks = new BooleanSetting(this, "Break on Partial Blocks",
+      s"If true, blocks fall when above solid 'partial' blocks such as slabs, and break when landing on such blocks.", () => true)
+
     private def displayNames(blocks: Set[Block]) = sortedCSV(blocks.map(displayName).toSeq)
 }
 

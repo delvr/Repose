@@ -95,7 +95,10 @@ object FallingBlockExtensions {
 
     def canFallThrough(pos: BlockPos)(implicit w: World): Boolean = {
         val state = w.getBlockState(pos)
-        canDisplace(state) || !hasSolidTop(pos, state)
+        if(breakOnPartialBlocks.value)
+          canDisplace(state) || !hasSolidTop(pos, state)
+        else
+          canDisplace(state) && !hasSolidTop(pos, state)
     }
 
     def hasSolidTop(pos: BlockPos, state: IBlockState)(implicit w: World): Boolean = {
@@ -121,11 +124,14 @@ object FallingBlockExtensions {
 
     def canDisplace(state: IBlockState): Boolean = !state.getMaterial.blocksMovement
 
-    def onLanding(pos: BlockPos, state: IBlockState, entityTags: Option[NBTTagCompound])(implicit w: World): Unit = {
+    def onLanding(collisionPos: BlockPos, state: IBlockState, entityTags: Option[NBTTagCompound])(implicit w: World): Unit = {
         val block = state.getBlock
+        val pos = if(!breakOnPartialBlocks.value && !canDisplace(w.getBlockState(collisionPos))) collisionPos.up else collisionPos
         val stateHere = w.getBlockState(pos)
-        // blockHere: landing on a slab; pos.down: landing on a ladder
-        if(!canDisplace(stateHere) || canDisplace(w.getBlockState(pos.down)))
+        if(breakOnPartialBlocks.value &&
+          (!canDisplace(stateHere) || // ex.: landing on a slab
+            canDisplace(w.getBlockState(pos.down)) || // ex.: landing on a ladder
+            hasSolidTop(pos, stateHere))) // ex. landing IN a ladder (falling instantly)
             block.dropBlockAsItem(w, pos, state, 0)
         else {
             if(!w.isAirBlock(pos))

@@ -30,7 +30,7 @@ object EntityFallingBlockExtensions {
 
     def onUpdate(entity: Entity) {
         entity match {
-            case e: EntityFallingBlock =>
+            case e: EntityFallingBlock if !e.getClass.getName.contains("chopdownupdated") =>
                 implicit val w = e.world
                 val state = e.getBlock
                 val block = state.getBlock
