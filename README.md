@@ -1,3 +1,5 @@
+## Note: this repository is superceded by [Farseek-Mods](https://github.com/delvr/Farseek-Mods) for newer Minecraft versions.
+
 # Repose
 This mod introduces walkable slopes and more to Minecraft.
 This means you can now walk up gentle slopes of grass, sand etc. without continually jumping.
